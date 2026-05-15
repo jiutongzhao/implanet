@@ -12,12 +12,13 @@ import numpy as np
 from PIL import Image
 
 from implanet.overlays import (
+    flatmap_terminator,
     graticule_segments,
     limb_circle,
     subobserver_point,
     terminator_segments,
 )
-from implanet.render import render_planet
+from implanet.render import render_flatmap, render_planet
 
 
 Vec3 = Sequence[float]
@@ -177,4 +178,124 @@ def plot_planet(
     if source_text:
         fig.text(0.99, 0.005, source_text, ha="right", va="bottom",
                  fontsize=7, color="0.45")
+    return fig, ax
+
+
+def plot_flatmap(
+    texture,
+    rotation_lon_deg: float = 0.0,
+    sun_direction: Optional[Vec3] = None,
+    ambient: float = 0.1,
+    lon0: float = -np.pi,
+    output_size: Optional[Tuple[int, int]] = None,
+    *,
+    title: Optional[str] = None,
+    body_name: Optional[str] = None,
+    source_text: Optional[str] = None,
+    lat_step_deg: float = 30.0,
+    lon_step_deg: float = 30.0,
+    graticule_color: str = "0.25",
+    graticule_alpha: float = 0.40,
+    graticule_lw: float = 0.6,
+    show_terminator: bool = True,
+    terminator_color: str = "white",
+    terminator_lw: float = 1.2,
+    terminator_ls: str = "--",
+    terminator_alpha: float = 0.95,
+    show_sub_solar: bool = True,
+    figsize: Tuple[float, float] = (10.0, 5.4),
+    dpi: int = 150,
+    ax=None,
+):
+    """Render `texture` as a plate-carrée map with degree-labeled axes.
+
+    Complements `plot_planet` (which produces an orthographic disk):
+    `plot_flatmap` shows the *entire* surface in a rectangular plot,
+    with optional `rotation_lon_deg` to shift the body's spin phase and
+    optional `sun_direction` to add Lambertian shading + a terminator
+    curve. Sub-solar point is marked with a red ``+`` when shading is on.
+
+    Returns (fig, ax).
+
+    Examples
+    --------
+    A shaded world map at a specific UTC, plus terminator:
+
+        >>> from implanet import sun_direction
+        >>> from implanet.figure import plot_flatmap
+        >>> sun = sun_direction("Earth", "2026-05-14T12:00:00")
+        >>> fig, ax = plot_flatmap(earth_tex, sun_direction=sun,
+        ...                        body_name="Earth",
+        ...                        title="Earth at 12:00 UTC")
+        >>> fig.savefig("earth_flat.png", dpi=140, bbox_inches="tight")
+    """
+    import matplotlib.pyplot as plt
+
+    arr = render_flatmap(
+        texture,
+        rotation_lon_deg=rotation_lon_deg,
+        sun_direction=sun_direction,
+        ambient=ambient,
+        lon0=lon0,
+        output_size=output_size,
+        return_array=True,
+    )
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    else:
+        fig = ax.figure
+
+    extent = (-180.0, 180.0, -90.0, 90.0)
+    ax.imshow(arr, extent=extent, origin="upper", interpolation="bilinear",
+              aspect="equal")
+
+    # Lat/lon graticule as dashed lines.
+    if lat_step_deg > 0:
+        for lat in np.arange(-90 + lat_step_deg, 90, lat_step_deg):
+            ax.axhline(lat, color=graticule_color, alpha=graticule_alpha,
+                       lw=graticule_lw, ls="--")
+    if lon_step_deg > 0:
+        for lon in np.arange(-180 + lon_step_deg, 180, lon_step_deg):
+            ax.axvline(lon, color=graticule_color, alpha=graticule_alpha,
+                       lw=graticule_lw, ls="--")
+
+    # Terminator curve.
+    sub_solar_str = ""
+    if sun_direction is not None:
+        if show_terminator:
+            for seg in flatmap_terminator(sun_direction,
+                                          rotation_lon_deg=rotation_lon_deg):
+                ax.plot(seg[:, 0], seg[:, 1],
+                        color=terminator_color, lw=terminator_lw,
+                        ls=terminator_ls, alpha=terminator_alpha)
+        # Sub-solar marker — apply the same display rotation.
+        s = np.asarray(sun_direction, dtype=np.float64)
+        s = s / np.linalg.norm(s)
+        sslat = float(np.degrees(np.arcsin(np.clip(s[2], -1, 1))))
+        sslon = float(np.degrees(np.arctan2(s[1], s[0])) - rotation_lon_deg)
+        sslon = ((sslon + 180) % 360) - 180
+        if show_sub_solar:
+            ax.plot(sslon, sslat, marker="+", color="red",
+                    markersize=10, markeredgewidth=1.4)
+        sub_solar_str = f"   sub-solar  ({sslat:+.1f}°, {sslon:+.1f}°)"
+
+    ax.set_xlim(-180, 180)
+    ax.set_ylim(-90, 90)
+    ax.set_xticks(np.arange(-180, 181, 60))
+    ax.set_yticks(np.arange(-90, 91, 30))
+    ax.set_xticklabels([f"{t:+d}°" for t in np.arange(-180, 181, 60)])
+    ax.set_yticklabels([f"{t:+d}°" for t in np.arange(-90, 91, 30)])
+    ax.set_xlabel("longitude")
+    ax.set_ylabel("latitude")
+    ax.tick_params(direction="out", length=4)
+
+    fig.patch.set_facecolor("white")
+    title_text = title or body_name
+    if title_text:
+        ax.set_title(title_text + sub_solar_str, fontsize=12, pad=8)
+    if source_text:
+        fig.text(0.99, 0.005, source_text, ha="right", va="bottom",
+                 fontsize=7, color="0.45")
+    fig.tight_layout()
     return fig, ax

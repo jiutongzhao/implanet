@@ -3,7 +3,11 @@
 import numpy as np
 import pytest
 
-from implanet import render_planet, camera_basis, sphere_to_uv, terminator_segments
+from implanet import (
+    render_planet, render_flatmap,
+    camera_basis, sphere_to_uv,
+    terminator_segments, flatmap_terminator,
+)
 from implanet.projection import orthographic_rays
 
 
@@ -111,6 +115,56 @@ def test_terminator_disappears_for_full_disk_or_full_shadow():
     for seg in segs:
         r2 = seg[:, 0]**2 + seg[:, 1]**2
         assert np.all(r2 > 0.999)
+
+
+def test_flatmap_no_rotation_no_sun_passes_texture_through():
+    """With zero rotation and no sun, the flat map equals the texture
+    up to one LSB of uint8 rounding (bilinear weight ≈ 0.999… on some
+    pixels from the float64 round-trip)."""
+    rng = np.random.default_rng(0)
+    tex = rng.integers(0, 256, (90, 180, 3), dtype=np.uint8)
+    out = render_flatmap(tex, return_array=True)
+    assert out.shape == tex.shape
+    diff = np.abs(out.astype(int) - tex.astype(int))
+    assert diff.max() <= 1
+
+
+def test_flatmap_rotation_shifts_pixels():
+    """A 180° rotation moves the bright hemisphere from east to west."""
+    h, w = 60, 120
+    tex = np.zeros((h, w, 3), dtype=np.uint8)
+    tex[:, w // 2:] = 200            # east hemisphere bright
+    out = render_flatmap(tex, rotation_lon_deg=180, return_array=True)
+    # After rotation, the left half of the output should be bright.
+    assert out[h // 2, 5, 0] > 150
+    assert out[h // 2, -5, 0] < 50
+
+
+def test_flatmap_shading_brightens_sub_solar():
+    """Sun at +X: output pixel at lon=0 (column center) is fully lit,
+    pixel at lon=±180 (column edges) is at the ambient floor."""
+    h, w = 90, 180
+    tex = np.full((h, w, 3), 200, dtype=np.uint8)
+    out = render_flatmap(tex, sun_direction=(1, 0, 0),
+                         ambient=0.0, return_array=True)
+    assert out[h // 2, w // 2, 0] > 195
+    assert out[h // 2, 0, 0] < 5
+    assert out[h // 2, -1, 0] < 5
+
+
+def test_flatmap_terminator_lies_on_zero_cos_locus():
+    sun = np.array([1.0, 1.0, 0.3])
+    sun_unit = sun / np.linalg.norm(sun)
+    segs = flatmap_terminator(sun_direction=sun)
+    assert len(segs) >= 1
+    for seg in segs:
+        lon = np.radians(seg[:, 0])
+        lat = np.radians(seg[:, 1])
+        P = np.stack([np.cos(lat) * np.cos(lon),
+                      np.cos(lat) * np.sin(lon),
+                      np.sin(lat)], axis=-1)
+        dots = P @ sun_unit
+        assert np.max(np.abs(dots)) < 1e-9
 
 
 def test_sun_shading_darkens_terminator():

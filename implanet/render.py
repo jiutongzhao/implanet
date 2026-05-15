@@ -170,3 +170,118 @@ def render_planet(
         out.shape[-1] if out.ndim == 3 else 1, "RGB"
     )
     return Image.fromarray(out, mode=mode)
+
+
+def render_flatmap(
+    texture: ArrayLike,
+    rotation_lon_deg: float = 0.0,
+    sun_direction: Vec3 | None = None,
+    ambient: float = 0.15,
+    lon0: float = -np.pi,
+    output_size: Union[None, Tuple[int, int]] = None,
+    return_array: bool = False,
+):
+    """Render the texture as a flat 2:1 equirectangular map.
+
+    Unlike `render_planet`, which produces an orthographic disk view of
+    the visible hemisphere, this function returns a full surface map in
+    plate-carrée projection (longitude on the x-axis, latitude on the
+    y-axis, both linear). Two optional transforms are applied per pixel:
+
+    * **Rotation** — `rotation_lon_deg` shifts the body's spin phase. The
+      pixel at output longitude ``λ_disp`` corresponds to body-fixed
+      longitude ``λ_disp + rotation_lon_deg``, so increasing the rotation
+      *rolls the map westward* (sub-solar bright spot moves east in
+      display). Use this to animate one rotation period.
+
+    * **Shadow** — if `sun_direction` (planet → Sun, body-fixed) is
+      given, each pixel is multiplied by
+      ``ambient + (1 − ambient) · max(0, P · sun_unit)`` where ``P`` is
+      the unit-sphere position at that pixel. The night side fades to
+      `ambient`; the sub-solar point is full bright.
+
+    Parameters
+    ----------
+    texture : ndarray or PIL.Image
+        Source equirectangular map (2:1).
+    rotation_lon_deg : float
+        Display rotation in degrees, in [−360, +360].
+    sun_direction : 3-vector or None
+        Body-fixed planet→Sun direction. Omit to skip shading.
+    ambient : float
+        Floor on the cosine factor, in [0, 1].
+    lon0 : float
+        Longitude (radians) corresponding to texture column 0.
+    output_size : (height, width) or None
+        Output dimensions. If None, matches the texture (must be 2:1 to
+        avoid distortion).
+    return_array : bool
+        True → np.uint8 array; False → PIL.Image.
+
+    Examples
+    --------
+    A plain shaded world map at the current SPICE epoch:
+
+        >>> from implanet import sun_direction, render_flatmap
+        >>> from PIL import Image
+        >>> tex = Image.open("maps/data/earth_bluemarble_5400x2700.jpg")
+        >>> sun = sun_direction("Earth", "2026-05-14T12:00:00")
+        >>> img = render_flatmap(tex, sun_direction=sun, ambient=0.05)
+
+    Spin Earth under a fixed sun (frames for an animation):
+
+        >>> frames = [render_flatmap(tex, rotation_lon_deg=d,
+        ...                          sun_direction=sun, ambient=0.05)
+        ...           for d in range(0, 360, 10)]
+    """
+    tex = _as_texture_array(texture)
+    tex_f = tex.astype(np.float64)
+    th, tw = tex.shape[:2]
+
+    if output_size is None:
+        oh, ow = th, tw
+    else:
+        oh, ow = output_size
+
+    # Output pixel grid → (lat_disp, lon_disp), with pixel centers at
+    # (j + 0.5, i + 0.5) so the top row sits at lat = +pi/2 - half-step.
+    j = np.arange(oh, dtype=np.float64)[:, None]
+    i = np.arange(ow, dtype=np.float64)[None, :]
+    lat_disp = (0.5 - (j + 0.5) / oh) * np.pi          # [+π/2, −π/2]
+    lon_disp = ((i + 0.5) / ow - 0.5) * 2 * np.pi      # [−π, +π)
+
+    # Apply body-spin rotation. The texture (and the surface normal used
+    # for shading) live in the rotated body-fixed frame.
+    lat_body = np.broadcast_to(lat_disp, (oh, ow))
+    lon_body = np.broadcast_to(lon_disp, (oh, ow)) + np.radians(rotation_lon_deg)
+
+    # Texture coords: wrap in longitude, clamp in latitude.
+    u = ((lon_body - lon0) / (2.0 * np.pi)) % 1.0
+    v = 0.5 - lat_body / np.pi
+    sampled = _sample_bilinear(tex_f, u, v)
+
+    if sun_direction is not None:
+        sun = np.asarray(sun_direction, dtype=np.float64)
+        sun_norm = np.linalg.norm(sun)
+        if sun_norm == 0.0:
+            raise ValueError("`sun_direction` must be nonzero.")
+        sun = sun / sun_norm
+
+        cl = np.cos(lat_body); sl = np.sin(lat_body)
+        co = np.cos(lon_body); so = np.sin(lon_body)
+        # Body-fixed surface point P (== outward normal on a unit sphere).
+        cos_i = cl * (co * sun[0] + so * sun[1]) + sl * sun[2]
+        cos_i = np.clip(cos_i, 0.0, 1.0)
+        shade = ambient + (1.0 - ambient) * cos_i
+        sampled = sampled * shade[..., None]
+
+    out = np.clip(sampled, 0.0, 255.0).astype(np.uint8)
+    if out.shape[-1] == 1:
+        out = out[..., 0]
+
+    if return_array:
+        return out
+    mode = {1: "L", 2: "LA", 3: "RGB", 4: "RGBA"}.get(
+        out.shape[-1] if out.ndim == 3 else 1, "RGB"
+    )
+    return Image.fromarray(out, mode=mode)

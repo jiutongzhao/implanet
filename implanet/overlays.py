@@ -212,6 +212,53 @@ def limb_circle(samples: int = 360) -> np.ndarray:
     return np.stack([np.cos(t), np.sin(t)], axis=-1)
 
 
+def flatmap_terminator(
+    sun_direction: Sequence[float],
+    rotation_lon_deg: float = 0.0,
+    samples: int = 721,
+):
+    """Day-night terminator on a plate-carrée flat map.
+
+    Returns the great circle ``{P : P · sun_unit = 0}`` as a sequence of
+    polylines in (lon_deg, lat_deg) coordinates suitable for plotting on
+    a (-180, 180, -90, 90)-extent matplotlib axes. The curve is split
+    wherever it wraps around the ±180° seam.
+
+    `rotation_lon_deg` matches the rotation passed to `render_flatmap`,
+    so the terminator stays aligned with the displayed bright spot.
+
+    Examples
+    --------
+        >>> from implanet import flatmap_terminator
+        >>> segs = flatmap_terminator(sun_direction=(1, 0, 0.5))
+        >>> for seg in segs:
+        ...     ax.plot(seg[:, 0], seg[:, 1], "w--", lw=1.0)
+    """
+    s = np.asarray(sun_direction, dtype=np.float64)
+    n = np.linalg.norm(s)
+    if n == 0.0:
+        raise ValueError("`sun_direction` must be nonzero.")
+    s = s / n
+
+    e1, e2 = _orthonormal_pair_perp_to(s)
+    t = np.linspace(0.0, 2.0 * np.pi, samples)
+    pts = np.outer(np.cos(t), e1) + np.outer(np.sin(t), e2)
+    lat = np.degrees(np.arcsin(np.clip(pts[:, 2], -1.0, 1.0)))
+    lon = np.degrees(np.arctan2(pts[:, 1], pts[:, 0])) - rotation_lon_deg
+    lon = ((lon + 180.0) % 360.0) - 180.0   # wrap to (-180, 180]
+
+    # Split where the longitude wraps to avoid a horizontal jump.
+    dlon = np.abs(np.diff(lon))
+    seam = np.where(dlon > 180.0)[0]
+    starts = np.concatenate(([0], seam + 1))
+    ends = np.concatenate((seam + 1, [len(lon)]))
+    segs = []
+    for a, b in zip(starts, ends):
+        if b - a >= 2:
+            segs.append(np.stack([lon[a:b], lat[a:b]], axis=-1))
+    return segs
+
+
 def subobserver_point(
     view_direction: Sequence[float],
     up: Sequence[float] = (0.0, 0.0, 1.0),
