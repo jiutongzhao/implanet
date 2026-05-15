@@ -273,9 +273,9 @@ plot_planet(
     show_limb=True,
     show_subobserver=True,
     show_terminator=True,             # only drawn if sun_direction is set
-    terminator_color="#ffcc44",
+    terminator_color="white",
     terminator_lw=1.2,
-    terminator_ls="-",
+    terminator_ls="--",
     terminator_alpha=0.95,
     figsize=(6.5, 6.5), dpi=150,
     ax=None,                          # plot into an existing axes if given
@@ -288,8 +288,8 @@ Produces:
 - equirectangular disk via `imshow` with `extent=(-margin, +margin)`
 - dashed parallel/meridian segments (every 30° by default), clipped at the limb
 - black limb circle
-- amber arc along the **day-night terminator** (the great circle where
-  `P · sun_unit = 0`), clipped at the limb — only drawn when
+- white dashed arc along the **day-night terminator** (the great circle
+  where `P · sun_unit = 0`), clipped at the limb — only drawn when
   `sun_direction` is supplied
 - red `+` at the sub-observer point
 - ticks at `[-1, -0.5, 0, +0.5, +1]` labeled in planet radii
