@@ -11,7 +11,12 @@ from typing import Optional, Sequence, Tuple, Union
 import numpy as np
 from PIL import Image
 
-from implanet.overlays import graticule_segments, limb_circle, subobserver_point
+from implanet.overlays import (
+    graticule_segments,
+    limb_circle,
+    subobserver_point,
+    terminator_segments,
+)
 from implanet.render import render_planet
 
 
@@ -38,6 +43,11 @@ def plot_planet(
     graticule_lw: float = 0.7,
     show_limb: bool = True,
     show_subobserver: bool = True,
+    show_terminator: bool = True,
+    terminator_color: str = "#ffcc44",
+    terminator_lw: float = 1.2,
+    terminator_ls: str = "-",
+    terminator_alpha: float = 0.95,
     figsize: Tuple[float, float] = (6.5, 6.5),
     dpi: int = 150,
     ax=None,
@@ -120,6 +130,15 @@ def plot_planet(
     if show_limb:
         c = limb_circle()
         ax.plot(c[:, 0], c[:, 1], linewidth=1.0, color="black")
+
+    if show_terminator and sun_direction is not None:
+        for seg in terminator_segments(view_direction=view_direction,
+                                       sun_direction=sun_direction, up=up):
+            ax.plot(seg[:, 0], seg[:, 1],
+                    linewidth=terminator_lw,
+                    linestyle=terminator_ls,
+                    color=terminator_color,
+                    alpha=terminator_alpha)
 
     if show_subobserver:
         ax.plot(0, 0, marker="+", color="red", markersize=8,

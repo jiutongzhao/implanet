@@ -244,6 +244,10 @@ graticule_segments(view_direction, up=(0,0,1),
 
 limb_circle(samples=360)                           # → (N, 2)
 subobserver_point(view_direction, up=(0,0,1))      # → (lat_deg, lon_deg)
+
+terminator_segments(view_direction, sun_direction, up=(0,0,1), samples=361)
+    # → list of (M, 2) arrays. The projected great circle
+    #   {P : P · sun_unit = 0}, clipped at the limb.
 ```
 
 ### Layer 4 — Figure helper
@@ -268,6 +272,11 @@ plot_planet(
     graticule_lw=0.7,
     show_limb=True,
     show_subobserver=True,
+    show_terminator=True,             # only drawn if sun_direction is set
+    terminator_color="#ffcc44",
+    terminator_lw=1.2,
+    terminator_ls="-",
+    terminator_alpha=0.95,
     figsize=(6.5, 6.5), dpi=150,
     ax=None,                          # plot into an existing axes if given
 )   # → (fig, ax)
@@ -279,6 +288,9 @@ Produces:
 - equirectangular disk via `imshow` with `extent=(-margin, +margin)`
 - dashed parallel/meridian segments (every 30° by default), clipped at the limb
 - black limb circle
+- amber arc along the **day-night terminator** (the great circle where
+  `P · sun_unit = 0`), clipped at the limb — only drawn when
+  `sun_direction` is supplied
 - red `+` at the sub-observer point
 - ticks at `[-1, -0.5, 0, +0.5, +1]` labeled in planet radii
 - caption: `sub-observer (lat, lon)` and (if `sun_direction` given) `sub-solar (lat, lon)`

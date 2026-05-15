@@ -6,6 +6,7 @@ from implanet.overlays import (
     graticule_segments,
     limb_circle,
     subobserver_point,
+    terminator_segments,
 )
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     "graticule_segments",
     "limb_circle",
     "subobserver_point",
+    "terminator_segments",
 ]
 
 # Ephemeris support requires the optional `spiceypy` dependency. Import

@@ -135,6 +135,67 @@ def graticule_segments(
     }
 
 
+def _orthonormal_pair_perp_to(v: np.ndarray) -> tuple:
+    """Return two unit vectors orthogonal to `v` and to each other."""
+    v = v / np.linalg.norm(v)
+    # Pick the axis least aligned with v to avoid a near-zero cross product.
+    seed = np.array([1.0, 0.0, 0.0]) if abs(v[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+    e1 = seed - (seed @ v) * v
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(v, e1)
+    return e1, e2
+
+
+def terminator_segments(
+    view_direction: Sequence[float],
+    sun_direction: Sequence[float],
+    up: Sequence[float] = (0.0, 0.0, 1.0),
+    samples: int = 361,
+):
+    """Projected day-night terminator as visible polyline segments.
+
+    The terminator is the great circle of points on the unit sphere
+    where the surface is perpendicular to the sun direction (i.e.
+    P · sun_unit = 0 — the locus where Lambertian shading drops to zero).
+    Only the portion that lies on the visible hemisphere is returned;
+    the curve is split into arcs at the limb crossings.
+
+    Returns
+    -------
+    list of (M, 2) ndarray
+        Polyline segments in unit-disk (u, v) coordinates. Plot with
+        ``ax.plot(seg[:, 0], seg[:, 1], …)``.
+
+    Examples
+    --------
+    Sun directly behind the camera produces a full-circle terminator at
+    the limb (the planet is fully lit):
+
+        >>> segs = terminator_segments((-1, 0, 0), sun_direction=(1, 0, 0))
+
+    Sun offset 45° produces a half-arc across the disk:
+
+        >>> segs = terminator_segments((-1, 0, 0), sun_direction=(1, 1, 0))
+        >>> for seg in segs:
+        ...     ax.plot(seg[:, 0], seg[:, 1], color="white",
+        ...             lw=1.0, linestyle="--")
+    """
+    right, up_axis, forward = camera_basis(view_direction, up)
+    s = np.asarray(sun_direction, dtype=np.float64)
+    s_norm = np.linalg.norm(s)
+    if s_norm == 0.0:
+        raise ValueError("`sun_direction` must be nonzero.")
+    s = s / s_norm
+
+    e1, e2 = _orthonormal_pair_perp_to(s)
+    t = np.linspace(0.0, 2.0 * np.pi, samples)
+    pts = np.outer(np.cos(t), e1) + np.outer(np.sin(t), e2)   # (N, 3)
+    uvz = _project(pts, right, up_axis, forward)
+    visible = uvz[:, 2] <= 1e-9
+    segs = _polyline_segments(uvz, visible)
+    return [s[:, :2] for s in segs]
+
+
 def limb_circle(samples: int = 360) -> np.ndarray:
     """Return (N, 2) points tracing the unit limb circle.
 
