@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "implanet"
+version = "0.1.0"
+description = "Render an equirectangular planet map into a 2D orthographic view with optional SPICE-driven sunlit geometry."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Jiutong Zhao", email = "jiutongzhao@gmail.com" },
+]
+keywords = [
+    "planetary-science",
+    "astronomy",
+    "rendering",
+    "orthographic-projection",
+    "spice",
+    "visualization",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "numpy>=1.22",
+    "Pillow>=9.0",
+]
+
+[project.optional-dependencies]
+ephemeris = ["spiceypy>=6.0"]
+figures = ["matplotlib>=3.5"]
+all = ["spiceypy>=6.0", "matplotlib>=3.5"]
+test = ["pytest>=7.0"]
+
+[project.urls]
+# Fill in once the GitHub remote exists; left here as placeholders.
+# Homepage = "https://github.com/<user>/implanet"
+# Source   = "https://github.com/<user>/implanet"
+# Issues   = "https://github.com/<user>/implanet/issues"
+
+[project.scripts]
+implanet = "implanet.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["implanet*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
