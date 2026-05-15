@@ -88,6 +88,22 @@ def graticule_segments(
     Output is a dict with keys "parallels" and "meridians". Each value is
     a list of (M, 2) arrays in unit-disk (u, v) coords; each array is one
     contiguous visible piece of a great/small circle.
+
+    Examples
+    --------
+    For an equatorial view, the 30° grid produces five parallels and
+    twelve meridians:
+
+        >>> g = graticule_segments(view_direction=(-1, 0, 0))
+        >>> len(g["parallels"]), len(g["meridians"])
+        (5, 12)
+        >>> g["meridians"][0].shape          # one polyline segment
+        (181, 2)
+
+    Overlay on a matplotlib axes (after `imshow(extent=(-1,1,-1,1))`):
+
+        >>> for seg in g["parallels"] + g["meridians"]:
+        ...     ax.plot(seg[:, 0], seg[:, 1], "k--", lw=0.7, alpha=0.55)
     """
     right, up_axis, forward = camera_basis(view_direction, up)
 
@@ -120,7 +136,17 @@ def graticule_segments(
 
 
 def limb_circle(samples: int = 360) -> np.ndarray:
-    """Return (N, 2) points tracing the unit limb circle."""
+    """Return (N, 2) points tracing the unit limb circle.
+
+    Examples
+    --------
+    Draw the planet outline on top of a rendered disk:
+
+        >>> c = limb_circle(samples=180)
+        >>> c.shape
+        (181, 2)
+        >>> ax.plot(c[:, 0], c[:, 1], "k-", linewidth=1.0)
+    """
     t = np.linspace(0, 2 * np.pi, samples + 1)
     return np.stack([np.cos(t), np.sin(t)], axis=-1)
 
@@ -129,7 +155,21 @@ def subobserver_point(
     view_direction: Sequence[float],
     up: Sequence[float] = (0.0, 0.0, 1.0),
 ):
-    """Return (lat_deg, lon_deg) of the sub-camera point on the planet."""
+    """Return (lat_deg, lon_deg) of the sub-camera point on the planet.
+
+    Examples
+    --------
+    Equator view from the +X side:
+
+        >>> subobserver_point((-1, 0, 0))
+        (0.0, 0.0)
+
+    Looking down at the north pole (needs a non-vertical `up`):
+
+        >>> lat, lon = subobserver_point((0, 0, -1), up=(1, 0, 0))
+        >>> lat
+        90.0
+    """
     _, _, forward = camera_basis(view_direction, up)
     # Sub-observer point is the unit-sphere position closest to camera:
     # P = -forward.

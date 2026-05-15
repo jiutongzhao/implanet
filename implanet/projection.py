@@ -35,6 +35,23 @@ def camera_basis(view_direction, up=(0.0, 0.0, 1.0)):
     is up in the rendered image — it is re-orthogonalized against forward.
 
     Raises ValueError if `view_direction` and `up` are parallel.
+
+    Examples
+    --------
+    Looking at the planet from the +X direction (sub-observer point at
+    lat=0, lon=0):
+
+        >>> right, up, forward = camera_basis((-1, 0, 0))
+        >>> forward                    # camera looks along -X toward origin
+        array([-1.,  0.,  0.])
+        >>> up                         # equator-aligned view, +Z stays up
+        array([0., 0., 1.])
+
+    A polar view requires a non-vertical `up` hint:
+
+        >>> r, u, f = camera_basis((0, 0, -1), up=(1, 0, 0))
+        >>> f                          # looking down at the north pole
+        array([ 0.,  0., -1.])
     """
     forward = _normalize(view_direction)
     up_hint = _normalize(up)
@@ -54,6 +71,24 @@ def orthographic_rays(size, right, up, forward, margin=1.0):
 
     `size` is either an int (square image) or (height, width).
     `margin` scales the planet within the image — 1.0 fits the disk exactly.
+
+    Examples
+    --------
+    Trace the visible hemisphere for a 256x256 render from the +X side:
+
+        >>> r, u, f = camera_basis((-1, 0, 0))
+        >>> points, mask = orthographic_rays(256, r, u, f)
+        >>> mask.shape
+        (256, 256)
+        >>> abs(mask.mean() - 3.14159/4) < 0.01    # disk area = pi*R^2
+        True
+        >>> points[128, 128]            # center pixel hits sub-observer point
+        array([1., 0., 0.])
+
+    Pixels outside the disk are NaN:
+
+        >>> bool(np.isnan(points[0, 0, 0]))
+        True
     """
     if isinstance(size, int):
         h = w = size
@@ -87,6 +122,24 @@ def sphere_to_uv(points, lon0=0.0):
     """Map points on the unit sphere to equirectangular (u, v) in [0, 1].
 
     `lon0` is the longitude (radians) of the texture's left edge.
+
+    Examples
+    --------
+    Spot-check the texture coordinate at famous points on the sphere:
+
+        >>> import numpy as np
+        >>> p = np.array([[1, 0, 0],     # prime meridian, equator
+        ...               [0, 1, 0],     # 90° east, equator
+        ...               [0, 0, 1],     # north pole
+        ...               [0, 0, -1]])   # south pole
+        >>> u, v = sphere_to_uv(p, lon0=-np.pi)
+        >>> u
+        array([0.5 , 0.75, 0.  , 0.  ])
+        >>> v
+        array([0.5, 0.5, 0. , 1. ])
+
+    For a texture whose left edge sits at the prime meridian, pass
+    ``lon0=0`` instead.
     """
     x = points[..., 0]
     y = points[..., 1]

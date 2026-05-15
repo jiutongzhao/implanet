@@ -85,7 +85,21 @@ def _download(url: str, dest: Path) -> None:
 
 
 def ensure_kernels(kernel_dir: Union[str, Path, None] = None) -> Path:
-    """Download SPICE kernels if missing; return the kernel directory."""
+    """Download SPICE kernels if missing; return the kernel directory.
+
+    Examples
+    --------
+    First call downloads naif0012.tls, pck00011.tpc and de440s.bsp
+    (~32 MB total) into ./kernels/:
+
+        >>> ensure_kernels()
+        PosixPath('.../kernels')
+
+    Use a custom location (or set the IMPLANET_KERNELS env var):
+
+        >>> ensure_kernels("/data/shared/spice_kernels")
+        PosixPath('/data/shared/spice_kernels')
+    """
     d = Path(kernel_dir) if kernel_dir is not None else KERNEL_DIR
     d.mkdir(parents=True, exist_ok=True)
     for name, url in _KERNELS.items():
@@ -97,7 +111,17 @@ def ensure_kernels(kernel_dir: Union[str, Path, None] = None) -> Path:
 
 
 def load_kernels(kernel_dir: Union[str, Path, None] = None) -> None:
-    """Furnish kernels into the SPICE pool (idempotent)."""
+    """Furnish kernels into the SPICE pool (idempotent).
+
+    Most users won't call this directly — `sun_direction`,
+    `sub_solar_point` and friends call it lazily on first use. Useful if
+    you want kernels loaded eagerly (e.g. before a long batch).
+
+    Examples
+    --------
+        >>> load_kernels()                       # downloads + furnishes
+        >>> load_kernels()                       # no-op, already loaded
+    """
     global _loaded
     if _loaded:
         return
@@ -146,6 +170,21 @@ def sun_direction(body: str, utc: str,
 
     Suitable for passing as `sun_direction=` to `render_planet`.
     `abcorr` is the SPICE aberration correction ("NONE", "LT", "LT+S").
+
+    Examples
+    --------
+        >>> v = sun_direction("Earth", "2026-05-14T12:00:00")
+        >>> float(np.linalg.norm(v))             # always a unit vector
+        1.0
+        >>> v.round(4)
+        array([ 0.9471, -0.0137,  0.3206])       # sub-solar ~ (+18°, -1°)
+
+    Plug straight into `render_planet`:
+
+        >>> img = render_planet(earth_tex,
+        ...                     view_direction=(-1, 0, 0),
+        ...                     sun_direction=v,
+        ...                     ambient=0.08)
     """
     load_kernels()
     frame, origin = _resolve_body(body)
@@ -155,7 +194,27 @@ def sun_direction(body: str, utc: str,
 
 def sub_solar_point(body: str, utc: str,
                     abcorr: str = "LT") -> Tuple[float, float]:
-    """Return (latitude_deg, east_longitude_deg) of the sub-solar point."""
+    """Return (latitude_deg, east_longitude_deg) of the sub-solar point.
+
+    Examples
+    --------
+    The sub-solar point is where the Sun is directly overhead:
+
+        >>> sub_solar_point("Mars", "2026-05-14T12:00:00")
+        (-24.6, -160.2)
+
+    Sun crosses Earth's equator at the March equinox:
+
+        >>> lat, _ = sub_solar_point("Earth", "2026-03-20T16:00:00")
+        >>> abs(lat) < 0.2
+        True
+
+    Uranus's 98° obliquity makes its sub-solar latitude swing wildly:
+
+        >>> lat, _ = sub_solar_point("Uranus", "2026-05-14T12:00:00")
+        >>> lat > 50
+        True
+    """
     v = sun_direction(body, utc, abcorr=abcorr)
     lat = float(np.degrees(np.arcsin(np.clip(v[2], -1.0, 1.0))))
     lon = float(np.degrees(np.arctan2(v[1], v[0])))
@@ -169,6 +228,25 @@ def view_direction_from_earth(body: str, utc: str,
     Negate to get the view-direction argument expected by `render_planet`
     (which wants camera -> planet-center). Useful for "as seen from Earth"
     renders.
+
+    Examples
+    --------
+    Get the sub-Earth point on the Moon — captures lunar libration
+    automatically when sampled over time:
+
+        >>> v = view_direction_from_earth("Moon", "2026-01-01T00:00:00")
+        >>> v.round(3)
+        array([ 0.993, -0.022, -0.114])    # sub-Earth ≈ (-6.6°, -1.3°)
+
+    Render the Moon as seen from Earth at a given instant, with real
+    libration AND real solar illumination:
+
+        >>> utc = "2026-01-15T00:00:00"
+        >>> earth = view_direction_from_earth("Moon", utc)
+        >>> view  = tuple(-x for x in earth)        # camera → center
+        >>> img = render_planet(moon_tex,
+        ...                     view_direction=view,
+        ...                     sun_direction=sun_direction("Moon", utc))
     """
     load_kernels()
     frame, origin = _resolve_body(body)
@@ -177,5 +255,16 @@ def view_direction_from_earth(body: str, utc: str,
 
 
 def known_bodies():
-    """List of body names supported by sun_direction()."""
+    """List of body names supported by sun_direction().
+
+    Examples
+    --------
+        >>> bodies = known_bodies()
+        >>> len(bodies)
+        22
+        >>> bodies[:5]
+        ['Mercury', 'Venus', 'Earth', 'Moon', 'Mars']
+        >>> "Pluto" in bodies and "Charon" in bodies
+        True
+    """
     return list(_BODY_INFO.keys())

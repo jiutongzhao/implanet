@@ -46,6 +46,38 @@ def plot_planet(
 
     The plotted axes range from -1 to +1 in *planet radii* on both axes.
     Returns (fig, ax).
+
+    Examples
+    --------
+    A publication-style figure: white background, dashed graticule, axis
+    ticks in planet radii, sub-observer marker, attribution slot.
+
+        >>> from PIL import Image
+        >>> from implanet.figure import plot_planet
+        >>> fig, ax = plot_planet(
+        ...     Image.open("maps/data/earth_bluemarble_5400x2700.jpg"),
+        ...     view_direction=(-1, -0.2, -0.3),
+        ...     sun_direction=(1, 0.5, 0.4),
+        ...     body_name="Earth",
+        ...     source_text="NASA Visible Earth · Blue Marble",
+        ... )
+        >>> fig.savefig("earth.png", dpi=140, bbox_inches="tight")
+
+    Drive view and sun directly from SPICE for physically-correct
+    geometry at a chosen epoch:
+
+        >>> from implanet import sun_direction
+        >>> sun = sun_direction("Mars", "2026-05-14T12:00:00")
+        >>> fig, _ = plot_planet(mars_tex,
+        ...                      view_direction=(-1, 0, 0),
+        ...                      sun_direction=sun,
+        ...                      title="Mars at 2026-05-14 12:00 UTC")
+
+    Embed multiple variants in a single grid by passing an existing axes:
+
+        >>> fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+        >>> plot_planet(blue_marble,      view_direction=v, ax=axes[0])
+        >>> plot_planet(visible_clouds,   view_direction=v, ax=axes[1])
     """
     import matplotlib.pyplot as plt
 

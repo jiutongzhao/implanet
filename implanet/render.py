@@ -97,6 +97,34 @@ def render_planet(
         RGB fill for pixels outside the planet disk.
     return_array : bool
         If True, return a NumPy uint8 array instead of a PIL.Image.
+
+    Examples
+    --------
+    Render the sub-observer hemisphere with no shading (the texture's
+    raw albedo shows everywhere on the disk):
+
+        >>> from PIL import Image
+        >>> tex = Image.open("maps/data/earth_bluemarble_5400x2700.jpg")
+        >>> img = render_planet(tex, view_direction=(-1, 0, 0), size=400)
+
+    Add a sun on the +X side to get Lambertian shading. The terminator
+    runs through the camera's line of sight (a half-illuminated disk):
+
+        >>> img = render_planet(tex,
+        ...                     view_direction=(-1, 0, 0),
+        ...                     sun_direction=(1, 0, 0),
+        ...                     ambient=0.05, size=512)
+
+    Use SPICE for both vectors and get a NumPy array out:
+
+        >>> from implanet import sun_direction
+        >>> sun = sun_direction("Mars", "2026-05-14T12:00:00")
+        >>> arr = render_planet(mars_tex,
+        ...                     view_direction=(-1, 0, 0),
+        ...                     sun_direction=sun,
+        ...                     return_array=True)
+        >>> arr.shape, arr.dtype
+        ((512, 512, 3), dtype('uint8'))
     """
     tex = _as_texture_array(texture)
     tex_f = tex.astype(np.float64)
