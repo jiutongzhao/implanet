@@ -25,7 +25,12 @@ from typing import List, Sequence
 from PIL import Image, ImageDraw, ImageFont
 Image.MAX_IMAGE_PIXELS = None
 
-from implanet import render_planet, sun_direction, view_direction_from_earth
+from implanet import render_disk, sun_direction, view_direction_from_earth
+
+
+def render_disk_pil(*args, **kwargs) -> Image.Image:
+    arr, _, _ = render_disk(*args, **kwargs)
+    return Image.fromarray(arr)
 
 
 REPO = Path(__file__).resolve().parent.parent
@@ -99,7 +104,7 @@ def anim_earth_rotation(size: int = 360, n_frames: int = 36) -> Path:
     frames: List[Image.Image] = []
     for i in range(n_frames):
         lon = (i * 360 / n_frames) - 180   # sub-observer longitude
-        img = render_planet(
+        img = render_disk_pil(
             tex, view_direction=latlon_view(15, lon),
             sun_direction=sun, size=size, ambient=0.08, margin=1.06,
             background=(15, 15, 18),
@@ -117,7 +122,7 @@ def anim_moon_terminator(size: int = 360, n_frames: int = 36) -> Path:
     for i in range(n_frames):
         sun_lon = (i * 360 / n_frames) - 180
         sun = latlon_sun(0, sun_lon)
-        img = render_planet(
+        img = render_disk_pil(
             tex, view_direction=latlon_view(0, 0),
             sun_direction=sun, size=size, ambient=0.02, margin=1.06,
             background=(8, 8, 12),
@@ -140,7 +145,7 @@ def anim_earth_seasons(size: int = 360, n_days: int = 365, step_days: int = 10) 
         dt = base + timedelta(days=d)
         utc = dt.strftime("%Y-%m-%dT%H:%M:%S")
         sun = sun_direction("Earth", utc)
-        img = render_planet(
+        img = render_disk_pil(
             tex, view_direction=latlon_view(0, 0),
             sun_direction=sun, size=size, ambient=0.08, margin=1.06,
             background=(15, 15, 18),
@@ -177,7 +182,7 @@ def anim_moon_libration(size: int = 360, n_days: int = 30,
         view = tuple(-x for x in view_earth)
         sub_earth_lat = math.degrees(math.asin(max(-1, min(1, view_earth[2]))))
         sub_earth_lon = math.degrees(math.atan2(view_earth[1], view_earth[0]))
-        img = render_planet(
+        img = render_disk_pil(
             tex, view_direction=view, sun_direction=sun,
             size=size, ambient=0.02, margin=1.08,
             background=(8, 8, 12),

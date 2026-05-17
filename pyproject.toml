@@ -52,9 +52,13 @@ test = ["pytest>=7.0"]
 
 [project.scripts]
 implanet = "implanet.cli:main"
+implanet-fetch = "implanet.fetch:main"
 
 [tool.setuptools.packages.find]
 include = ["implanet*"]
+
+[tool.setuptools.package-data]
+"implanet.assets" = ["data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

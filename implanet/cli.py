@@ -8,7 +8,7 @@ import math
 import numpy as np
 from PIL import Image
 
-from implanet.render import render_planet
+from implanet.render import render_disk
 
 
 def _vec3(s: str):
@@ -71,7 +71,7 @@ def main(argv=None):
         view = (-1.0, 0.0, 0.0)  # default: looking at lat=0, lon=0
 
     tex = Image.open(args.texture)
-    img = render_planet(
+    arr, _, _ = render_disk(
         tex,
         view_direction=view,
         up=args.up,
@@ -82,7 +82,7 @@ def main(argv=None):
         ambient=args.ambient,
         background=tuple(int(c) for c in args.background),
     )
-    img.save(args.output)
+    Image.fromarray(arr).save(args.output)
     return 0
 
 

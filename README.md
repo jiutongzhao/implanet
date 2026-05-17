@@ -23,35 +23,57 @@ publication-style matplotlib figure layer.
 pip install -e .                    # core: numpy + Pillow
 pip install -e .[ephemeris]         # adds spiceypy
 pip install -e .[figures]           # adds matplotlib
-pip install -e .[all]               # both
+pip install -e .[all]               # both of the above
+pip install -e .[all,test]          # + pytest (for development)
 ```
 
-Python ≥ 3.9. The first call to `ensure_kernels()` downloads ~32 MB of NAIF
-kernels to `./kernels/` (override location with the `IMPLANET_KERNELS`
-env var).
+Python ≥ 3.9. Two console scripts are installed:
+
+```bash
+implanet <texture> <output> [...]   # render one disk to a file
+implanet-fetch [--list|--body ...]  # bulk-download maps
+```
+
+**Assets are not bundled** — textures and SPICE kernels download on first
+use. By default they live *with the package*
+(`site-packages/implanet/_data/{maps,kernels}`); in a dev checkout the
+repo's `maps/data/` and `kernels/` are reused instead. Override with
+`IMPLANET_CACHE=/some/dir` (or `IMPLANET_MAPS` / `IMPLANET_KERNELS` for
+fine control). The first `ensure_kernels()` pulls ~32 MB of generic NAIF
+kernels; individual textures download as you request them.
 
 ## Quick start
 
 ```python
 from PIL import Image
-from implanet import render_planet
+from implanet import render_disk, get_texture
 
-tex = Image.open("maps/data/earth_bluemarble_5400x2700.jpg")
-img = render_planet(
-    tex,
-    view_direction=(-1, -0.2, -0.3),   # camera → planet center, in body-fixed frame
+# get_texture downloads (once) and returns a local path. render_disk
+# accepts that path directly — no need to open it yourself.
+img, x, y = render_disk(
+    get_texture("Earth"),              # str/Path | PIL.Image | ndarray
+    view_direction=(-1, -0.2, -0.3),   # camera → planet center, body-fixed
     sun_direction=(1, 0.5, 0.4),       # planet → Sun
     size=600,
 )
-img.save("earth.png")
+Image.fromarray(img).save("earth.png")
+# Or plot it yourself — x, y are pixel-edge coords in planet radii so the
+# disk lands at [-1, +1] on both axes:
+#   ax.imshow(img, extent=(x.min(), x.max(), y.min(), y.max()))
+#   ax.set_aspect("equal")
 ```
+
+`get_texture(body, variant=None)` picks the body's default map; pass a
+variant for a specific one, e.g. `get_texture("Earth", "natural_earth3")`.
 
 For a publication-style figure (white background, dashed lat/lon grid,
 axis ticks in planet radii):
 
 ```python
+from implanet import get_texture
 from implanet.figure import plot_planet
-fig, ax = plot_planet(tex, view_direction=(-1,-0.2,-0.3),
+fig, ax = plot_planet(get_texture("Earth"),
+                      view_direction=(-1,-0.2,-0.3),
                       sun_direction=(1,0.5,0.4),
                       body_name="Earth",
                       source_text="NASA Visible Earth · Blue Marble")
@@ -62,7 +84,8 @@ With real ephemerides:
 
 ```python
 import math
-from implanet import sun_direction, sub_solar_point
+from implanet import sun_direction, sub_solar_point, get_texture
+from implanet.figure import plot_planet
 
 utc = "2026-05-14T12:00:00"
 sun = sun_direction("Mars", utc)
@@ -74,7 +97,7 @@ view = (-math.cos(lat_cam)*math.cos(lon_cam),
         -math.cos(lat_cam)*math.sin(lon_cam),
         -math.sin(lat_cam))
 
-fig, _ = plot_planet(Image.open("maps/data/mars_sss_8k.jpg"),
+fig, _ = plot_planet(get_texture("Mars"),
                      view_direction=view, sun_direction=sun,
                      title=f"Mars  {utc} UTC")
 fig.savefig("mars.png")
@@ -104,7 +127,7 @@ row 0 = north pole). `lon0` shifts the texture's left edge in radians:
 
 ## How rendering works
 
-`render_planet` does orthographic projection of a textured unit sphere
+`render_disk` does orthographic projection of a textured unit sphere
 and (optionally) Lambertian shading. All steps are fully vectorized in
 NumPy — there are no per-pixel Python loops.
 
@@ -207,8 +230,8 @@ calls.
 ### Layer 1 — Rendering
 
 ```python
-render_planet(
-    texture,                       # ndarray (H,W) | (H,W,C) | PIL.Image
+image, x, y = render_disk(
+    texture,                       # str/Path | PIL.Image | ndarray (H,W)|(H,W,C)
     view_direction=(1, 0, 0),
     up=(0, 0, 1),                  # world-up hint
     size=512,                      # int or (h, w)
@@ -217,13 +240,17 @@ render_planet(
     sun_direction=None,            # None → flat albedo (no shading)
     ambient=0.15,                  # [0, 1]; floor on Lambertian shading
     background=(0, 0, 0),          # RGB 0-255 for off-disk pixels
-    return_array=False,            # True → np.uint8 array, False → PIL.Image
 )
+# image: uint8 ndarray (H, W) or (H, W, C)
+# x:     length W+1 pixel-edge coords, increasing from -margin to +margin (planet radii)
+# y:     length H+1 pixel-edge coords, decreasing from +margin to -margin (matches row 0 = top)
+# → Save: Image.fromarray(image).save(...)
+# → Plot: ax.pcolormesh(x, y, image); ax.set_aspect("equal")
 ```
 
 ### Layer 2 — Geometry primitives
 
-Used internally by `render_planet`, exposed if you need to build your own
+Used internally by `render_disk`, exposed if you need to build your own
 pipeline.
 
 ```python
@@ -235,19 +262,28 @@ sphere_to_uv(points, lon0=0.0)                     # → (u, v) in [0, 1]
 
 ### Layer 3 — Overlays (matplotlib-friendly)
 
+Every overlay returns plain x/y arrays in unit-disk coordinates (the
+visible hemisphere, u²+v² ≤ 1) so you can `ax.plot(x, y)` them directly
+onto a rendered disk — no Nx2 unpacking, no matplotlib dependency in the
+overlay layer itself.
+
 ```python
 graticule_segments(view_direction, up=(0,0,1),
                    lat_step_deg=30, lon_step_deg=30,
                    include_poles=True, samples_per_line=361)
-    # → {"parallels": [Nx2 arrays], "meridians": [Nx2 arrays]}
-    #   in unit-disk coordinates (u² + v² ≤ 1, visible hemisphere)
+    # → {"parallels": (xs, ys), "meridians": (xs, ys)}
+    #   xs, ys are parallel LISTS of 1-D arrays — one polyline per line:
+    #   for x, y in zip(*g["parallels"]): ax.plot(x, y)
 
-limb_circle(samples=360)                           # → (N, 2)
-subobserver_point(view_direction, up=(0,0,1))      # → (lat_deg, lon_deg)
+limb_circle(samples=360)                           # → (x, y)  two 1-D arrays
+subobserver_point(view_direction, up=(0,0,1))      # → (lat_deg, lon_deg) floats
 
 terminator_segments(view_direction, sun_direction, up=(0,0,1), samples=361)
-    # → list of (M, 2) arrays. The projected great circle
-    #   {P : P · sun_unit = 0}, clipped at the limb.
+    # → (xs, ys)  parallel lists of 1-D arrays: the projected great
+    #   circle {P : P · sun_unit = 0}, clipped at the limb.
+
+flatmap_terminator(sun_direction, rotation_lon_deg=0.0, samples=721)
+    # → (xs, ys) lon/lat-space terminator for render_flatmap output
 ```
 
 ### Layer 4 — Figure helper
@@ -330,6 +366,32 @@ Uranus   Neptune Triton  Pluto   Charon
 The Sun is intentionally absent — `sun_direction("Sun", ...)` would be
 meaningless; render the Sun's texture flat with `ambient=1.0`.
 
+## Command line
+
+```bash
+implanet <texture> <output> [options]
+```
+
+`<texture>` is any image path; `<output>` is the PNG/JPG to write.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--view x,y,z` | `-1,0,0` | camera → planet center |
+| `--latlon lat,lon,0` | — | sub-camera point instead of `--view` (mutually exclusive) |
+| `--up x,y,z` | `0,0,1` | up hint (north pole) |
+| `--size N` | `512` | square edge length |
+| `--margin F` | `1.05` | padding around the disk (≥1.0) |
+| `--lon0 DEG` | `-180` | longitude of the texture's left edge |
+| `--sun x,y,z` | none | planet → Sun; omit for flat (no shading) |
+| `--ambient A` | `0.15` | night-side floor when `--sun` is set |
+| `--background r,g,b` | `0,0,0` | off-disk fill (0–255) |
+
+```bash
+# Mars as seen from sub-point (20°N, 60°E), sun over the prime meridian
+implanet $(python -c "import implanet;print(implanet.get_texture('Mars'))") \
+         mars.png --latlon 20,60,0 --sun 1,0,0
+```
+
 ## Map sources
 
 `maps/manifest.json` catalogs equirectangular maps from NASA, ESA, JAXA,
@@ -341,48 +403,42 @@ and CNSA, plus a few community redistributions. Each entry has:
 - `asset_url` (auto-downloadable) and/or `portal_url` (manual)
 - `provenance`, `license`, `citation`
 
-Fetch the auto-downloadable subset:
+**See what's available** (don't rely on a hand-maintained list here — it
+goes stale; ask the package):
+
+```python
+import implanet
+implanet.show_maps()                 # pretty table: body, variant, size, status
+implanet.show_maps(body="Earth")     # filter to one body
+implanet.list_maps(downloadable_only=True)   # → list[dict], for scripting
+```
 
 ```bash
-python scripts/fetch_maps.py                    # ~250 MB total
-python scripts/fetch_maps.py --list             # show every entry
-python scripts/fetch_maps.py --body Mars        # filter
-python scripts/fetch_maps.py --variant sss      # filter
-python scripts/fetch_maps.py --include-large    # also Mars Viking 12 GB
+implanet-fetch --list                # same catalogue from the shell
+implanet-fetch --where               # print the resolved maps directory
 ```
 
-Files land in `maps/data/`. Already-downloaded files are skipped on
-subsequent runs.
+**Get one map** (lazy, on demand) — usually all you need:
 
-Bodies and variants currently auto-downloadable:
-
-```
-Sun       sss
-Mercury   sss
-Venus     sss_surface  sss_atmosphere
-Earth     blue_marble  blue_marble_8k  sss_daymap  sss_nightmap  sss_clouds
-Moon      lroc_color_2019  lroc_color_2025  sss  clementine_uvvis
-Mars      sss  viking_mdim21_1km   (viking_mdim21_fullres = 12 GB, gated)
-Phobos    dlr_viking_hrsc
-Jupiter   sss  cassini_pia07782
-Io        voyager_pia00319
-Europa    voyager_galileo_usgs
-Ganymede  jonsson
-Callisto  voyager_galileo_usgs
-Saturn    sss
-Enceladus cassini_pia14937
-Rhea      cassini_pia12561
-Iapetus   cassini_color
-Uranus    sss
-Neptune   sss
-Triton    voyager
-Pluto     new_horizons
-Charon    new_horizons
+```python
+from implanet import get_texture
+path = get_texture("Mars")                       # default variant
+path = get_texture("Earth", "natural_earth3")    # specific, vivid variant
 ```
 
-Manual-only entries (portal URL only) cover Titan, ESA HRSC Mars,
-JAXA Kaguya, CNSA Chang'e-2 / Tianwen-1, and the full-resolution USGS
-mosaics.
+**Bulk-download** the auto-fetchable subset:
+
+```bash
+implanet-fetch                       # ~250 MB total
+implanet-fetch --body Mars           # filter by body
+implanet-fetch --agency NASA         # filter by agency
+implanet-fetch --include-large       # also the multi-GB USGS mosaics
+```
+
+Status column meaning: `cached` (on disk) · `download` (auto-fetchable)
+· `generate` (synthetic, built locally) · `manual` (portal-only — e.g.
+Titan's default, ESA HRSC Mars, JAXA Kaguya, CNSA mosaics, full-res USGS;
+`get_texture` raises with the portal URL for these).
 
 ## Reproducing the demo figures
 
@@ -425,15 +481,18 @@ equirectangular sample — credit goes to whoever made the map.
 ## Tests
 
 ```bash
-pytest tests/                       # 15 tests, ~1 s
+pip install -e .[all,test]
+pytest tests/                       # 38 tests, ~1 s
 ```
 
 `tests/test_render.py` covers basis orthonormality, disk geometry,
-sphere→uv mapping, hemisphere correctness, and terminator shading.
-`tests/test_ephemeris.py` sanity-checks SPICE-derived geometry against
-physical reality (Mercury obliquity ≈ 0, Uranus obliquity dominates, sun
-near Greenwich at equinox noon UTC). The ephemeris tests are
-auto-skipped if `spiceypy` or the kernels are absent.
+sphere→uv mapping, hemisphere correctness, terminator shading, and
+path/PIL/array texture inputs. `tests/test_assets.py` covers the
+registry/cache layer (resolution order, packaged-registry sync, the
+synthetic texture). `tests/test_ephemeris.py` sanity-checks
+SPICE-derived geometry against physical reality (Mercury obliquity ≈ 0,
+Uranus obliquity dominates, sun near Greenwich at equinox noon UTC) and
+auto-skips if `spiceypy` or the kernels are absent.
 
 ## File layout
 
@@ -441,23 +500,25 @@ auto-skipped if `spiceypy` or the kernels are absent.
 implanet/
 ├── __init__.py            # public API + lazy ephemeris import
 ├── projection.py          # camera_basis, orthographic_rays, sphere_to_uv
-├── render.py              # render_planet
-├── overlays.py            # graticule_segments, limb_circle, subobserver_point
+├── render.py              # render_disk, render_flatmap
+├── overlays.py            # graticule/limb/terminator/subobserver
 ├── figure.py              # plot_planet  (matplotlib)
 ├── ephemeris.py           # SPICE wrappers  (spiceypy)
-└── cli.py                 # `implanet` console script
+├── fetch.py               # `implanet-fetch` console script
+├── cli.py                 # `implanet` console script
+└── assets/                # registry + lazy download/cache
+    ├── __init__.py        #   get_texture, get_kernel, list_maps, show_maps
+    ├── _registry.py _cache.py _synthetic.py
+    └── data/              #   packaged copies of the registry JSON
 
 maps/
-├── manifest.json          # 38 entries, 22 bodies
-└── data/                  # populated by scripts/fetch_maps.py
+├── manifest.json          # 41 entries, 23 bodies (textures)
+├── kernels.json           # SPICE kernel registry
+└── data/                  # texture cache (dev checkout)
 
-kernels/                   # SPICE files, populated by ensure_kernels()
-scripts/fetch_maps.py
-examples/
-├── figures.py
-├── scientific_figures.py
-├── comparison_figures.py
-└── demo.py
-tests/test_render.py
-tests/test_ephemeris.py
+kernels/                   # SPICE cache (dev checkout); pip → implanet/_data
+scripts/                   # fetch_maps.py / sync_registry.py (dev shims)
+examples/                  # demo.py, scientific_figures.py, flatmap_figures.py,
+                           # transparent_disks.py, per-mission flybys, …
+tests/                     # test_render.py, test_assets.py, test_ephemeris.py
 ```

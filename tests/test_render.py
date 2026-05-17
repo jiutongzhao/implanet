@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from implanet import (
-    render_planet, render_flatmap,
+    render_disk, render_flatmap,
     camera_basis, sphere_to_uv,
     terminator_segments, flatmap_terminator,
 )
@@ -56,15 +56,28 @@ def test_sphere_to_uv_roundtrip_known_points():
 def test_render_returns_correct_shape_and_dtype():
     tex = np.zeros((100, 200, 3), dtype=np.uint8)
     tex[..., 0] = 200
-    out = render_planet(tex, size=64, return_array=True)
+    out, x, y = render_disk(tex, size=64)
     assert out.shape == (64, 64, 3)
     assert out.dtype == np.uint8
+    assert x.shape == (65,)
+    assert y.shape == (65,)
+
+
+def test_render_disk_xy_edges_span_margin():
+    tex = np.full((50, 100, 3), 200, dtype=np.uint8)
+    _, x, y = render_disk(tex, size=64, margin=1.05)
+    np.testing.assert_allclose(x[0], -1.05, atol=1e-12)
+    np.testing.assert_allclose(x[-1], +1.05, atol=1e-12)
+    np.testing.assert_allclose(y[0], +1.05, atol=1e-12)    # top edge of row 0
+    np.testing.assert_allclose(y[-1], -1.05, atol=1e-12)   # bottom edge of last row
+    assert np.all(np.diff(x) > 0)
+    assert np.all(np.diff(y) < 0)
 
 
 def test_render_background_outside_disk():
     tex = np.full((100, 200, 3), 200, dtype=np.uint8)
-    out = render_planet(
-        tex, size=64, margin=1.5, background=(10, 20, 30), return_array=True
+    out, _, _ = render_disk(
+        tex, size=64, margin=1.5, background=(10, 20, 30),
     )
     # Corner pixel is definitely outside the disk.
     np.testing.assert_array_equal(out[0, 0], [10, 20, 30])
@@ -80,7 +93,7 @@ def test_render_picks_correct_hemisphere():
     tex[:, : w // 2] = [0, 0, 255]  # west -> blue
 
     # Camera on the +Y side looking toward -Y sees the east (red) hemisphere.
-    out = render_planet(tex, view_direction=(0, -1, 0), size=128, return_array=True)
+    out, _, _ = render_disk(tex, view_direction=(0, -1, 0), size=128)
     center = out[64, 64]
     assert center[0] > 200 and center[2] < 50
 
@@ -93,11 +106,10 @@ def test_terminator_segments_lie_on_zero_cos_locus():
     sun_unit = sun / np.linalg.norm(sun)
     r, u, f = camera_basis(view)
 
-    segs = terminator_segments(view_direction=view, sun_direction=sun)
-    assert len(segs) >= 1
+    xs, ys = terminator_segments(view_direction=view, sun_direction=sun)
+    assert len(xs) >= 1 and len(xs) == len(ys)
 
-    for seg in segs:
-        u_im, v_im = seg[:, 0], seg[:, 1]
+    for u_im, v_im in zip(xs, ys):
         # On the near hemisphere: z (along forward) ≤ 0, so depth into the
         # disk is sqrt(1 - u^2 - v^2) taken with negative forward.
         z = np.sqrt(np.clip(1.0 - u_im**2 - v_im**2, 0.0, 1.0))
@@ -110,10 +122,10 @@ def test_terminator_disappears_for_full_disk_or_full_shadow():
     # Sun behind camera → entire visible hemisphere lit → no terminator
     # crosses the disk; the curve sits exactly on the limb so projects
     # to the unit circle (not "no segments", but |u^2+v^2| ≈ 1 everywhere).
-    segs = terminator_segments(view_direction=(-1, 0, 0),
-                               sun_direction=(1, 0, 0))
-    for seg in segs:
-        r2 = seg[:, 0]**2 + seg[:, 1]**2
+    xs, ys = terminator_segments(view_direction=(-1, 0, 0),
+                                 sun_direction=(1, 0, 0))
+    for x, y in zip(xs, ys):
+        r2 = x**2 + y**2
         assert np.all(r2 > 0.999)
 
 
@@ -155,11 +167,11 @@ def test_flatmap_shading_brightens_sub_solar():
 def test_flatmap_terminator_lies_on_zero_cos_locus():
     sun = np.array([1.0, 1.0, 0.3])
     sun_unit = sun / np.linalg.norm(sun)
-    segs = flatmap_terminator(sun_direction=sun)
-    assert len(segs) >= 1
-    for seg in segs:
-        lon = np.radians(seg[:, 0])
-        lat = np.radians(seg[:, 1])
+    xs, ys = flatmap_terminator(sun_direction=sun)
+    assert len(xs) >= 1 and len(xs) == len(ys)
+    for lon_deg, lat_deg in zip(xs, ys):
+        lon = np.radians(lon_deg)
+        lat = np.radians(lat_deg)
         P = np.stack([np.cos(lat) * np.cos(lon),
                       np.cos(lat) * np.sin(lon),
                       np.sin(lat)], axis=-1)
@@ -170,14 +182,51 @@ def test_flatmap_terminator_lies_on_zero_cos_locus():
 def test_sun_shading_darkens_terminator():
     tex = np.full((100, 200, 3), 200, dtype=np.uint8)
     # View from +X, sun also from +X -> whole visible disk fully lit.
-    lit = render_planet(
+    lit, _, _ = render_disk(
         tex, view_direction=(-1, 0, 0), sun_direction=(1, 0, 0),
-        ambient=0.0, size=128, return_array=True,
+        ambient=0.0, size=128,
     )
     # View from +X, sun from -X -> visible disk in shadow (ambient only).
-    dark = render_planet(
+    dark, _, _ = render_disk(
         tex, view_direction=(-1, 0, 0), sun_direction=(-1, 0, 0),
-        ambient=0.0, size=128, return_array=True,
+        ambient=0.0, size=128,
     )
     assert lit[64, 64, 0] > 150
     assert dark[64, 64, 0] < 10
+
+
+def test_render_accepts_image_path(tmp_path):
+    """render_disk / render_flatmap take a file path directly and open
+    it via Pillow (decoder from the conventional file type)."""
+    from pathlib import Path
+    from PIL import Image
+
+    rng = np.random.default_rng(1)
+    tex = rng.integers(0, 256, (90, 180, 3), dtype=np.uint8)
+    p = tmp_path / "tex.png"
+    Image.fromarray(tex).save(p)
+
+    # str and Path both work, and match passing the array directly.
+    ref, _, _ = render_disk(tex, view_direction=(-1, 0, 0), size=64)
+    by_str, _, _ = render_disk(str(p), view_direction=(-1, 0, 0), size=64)
+    by_path, _, _ = render_disk(Path(p), view_direction=(-1, 0, 0), size=64)
+    np.testing.assert_array_equal(ref, by_str)
+    np.testing.assert_array_equal(ref, by_path)
+
+    flat = render_flatmap(str(p), return_array=True)
+    assert flat.shape == tex.shape
+
+
+def test_render_coerces_palette_image(tmp_path):
+    """A palette ('P') PNG is decoded to real RGB, not raw indices."""
+    from PIL import Image
+
+    tex = np.zeros((90, 180, 3), dtype=np.uint8)
+    tex[:, 90:] = (200, 30, 30)
+    p = tmp_path / "pal.png"
+    Image.fromarray(tex).convert("P").save(p)
+
+    img, _, _ = render_disk(p, view_direction=(-1, 0, 0),
+                            up=(0, 1, 0), size=64)
+    assert img.ndim == 3 and img.shape[-1] == 3   # RGB, not index plane
+    assert int(img.max()) > 100                   # real colour values

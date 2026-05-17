@@ -7,7 +7,7 @@ Outputs: demo_front.png, demo_side.png, demo_pole.png, demo_lit.png
 import numpy as np
 from PIL import Image
 
-from implanet import render_planet
+from implanet import render_disk
 
 
 def make_synthetic_texture(h: int = 512, w: int = 1024) -> np.ndarray:
@@ -52,25 +52,30 @@ def main():
     tex = make_synthetic_texture()
     Image.fromarray(tex).save("demo_texture.png")
 
+    def save(arr, path):
+        Image.fromarray(arr).save(path)
+
     # 1. Looking at lon=0, lat=0 from +X; camera -> center direction is -X.
-    render_planet(tex, view_direction=(-1, 0, 0), size=512).save("demo_front.png")
+    arr, _, _ = render_disk(tex, view_direction=(-1, 0, 0), size=512)
+    save(arr, "demo_front.png")
 
     # 2. Side view (90 deg around).
-    render_planet(tex, view_direction=(0, -1, 0), size=512).save("demo_side.png")
+    arr, _, _ = render_disk(tex, view_direction=(0, -1, 0), size=512)
+    save(arr, "demo_side.png")
 
     # 3. Looking down at the north pole.
-    render_planet(
-        tex, view_direction=(0, 0, -1), up=(1, 0, 0), size=512
-    ).save("demo_pole.png")
+    arr, _, _ = render_disk(tex, view_direction=(0, 0, -1), up=(1, 0, 0), size=512)
+    save(arr, "demo_pole.png")
 
     # 4. Lit by the sun at (1, 1, 0.3).
-    render_planet(
+    arr, _, _ = render_disk(
         tex,
         view_direction=(-1, -0.2, -0.3),
         sun_direction=(1, 1, 0.3),
         ambient=0.1,
         size=512,
-    ).save("demo_lit.png")
+    )
+    save(arr, "demo_lit.png")
 
     print("Wrote demo_texture.png, demo_front.png, demo_side.png, "
           "demo_pole.png, demo_lit.png")
