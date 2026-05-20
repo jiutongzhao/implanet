@@ -149,13 +149,13 @@ def main(argv=None) -> int:
             continue
 
         for vname, (vdir, vup) in VIEWS.items():
-            img, x, y = render_disk(
+            img = render_disk(
                 tex, view_direction=vdir, up=vup, sun_direction=sun,
                 ambient=0.05, size=args.size, margin=1.0,
             )
+            # margin=1.0 + RGBA texture → image exactly spans [-1, +1] and
+            # carries an alpha channel that's 0 off-disk (full transparency).
             assert img.shape[-1] == 4
-            assert abs(x[0] + 1) < 1e-9 and abs(x[-1] - 1) < 1e-9
-            assert abs(y[0] - 1) < 1e-9 and abs(y[-1] + 1) < 1e-9
 
             dest = OUT_DIR / f"{body.lower()}_{vname}.png"
             Image.fromarray(img, "RGBA").save(dest)

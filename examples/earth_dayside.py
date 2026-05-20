@@ -41,7 +41,7 @@ def main() -> int:
         return 1
 
     view = tuple(-float(c) for c in sun)        # sub-observer == sub-solar
-    img, _, _ = render_disk(
+    img = render_disk(
         Image.open(get_texture("Earth")).convert("RGB"),
         view_direction=view,
         sun_direction=sun,

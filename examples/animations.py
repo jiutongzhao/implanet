@@ -29,7 +29,7 @@ from implanet import render_disk, sun_direction, view_direction_from_earth
 
 
 def render_disk_pil(*args, **kwargs) -> Image.Image:
-    arr, _, _ = render_disk(*args, **kwargs)
+    arr = render_disk(*args, **kwargs)
     return Image.fromarray(arr)
 
 

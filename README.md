@@ -50,16 +50,16 @@ from implanet import render_disk, get_texture
 
 # get_texture downloads (once) and returns a local path. render_disk
 # accepts that path directly — no need to open it yourself.
-img, x, y = render_disk(
+img = render_disk(
     get_texture("Earth"),              # str/Path | PIL.Image | ndarray
     view_direction=(-1, -0.2, -0.3),   # camera → planet center, body-fixed
     sun_direction=(1, 0.5, 0.4),       # planet → Sun
     size=600,
 )
 Image.fromarray(img).save("earth.png")
-# Or plot it yourself — x, y are pixel-edge coords in planet radii so the
-# disk lands at [-1, +1] on both axes:
-#   ax.imshow(img, extent=(x.min(), x.max(), y.min(), y.max()))
+# Or plot it yourself — the disk occupies [-1, +1] in planet radii, with
+# a small `margin` cushion around it (default 1.05):
+#   ax.imshow(img, extent=(-1.05, 1.05, -1.05, 1.05))
 #   ax.set_aspect("equal")
 ```
 
@@ -230,7 +230,7 @@ calls.
 ### Layer 1 — Rendering
 
 ```python
-image, x, y = render_disk(
+image = render_disk(
     texture,                       # str/Path | PIL.Image | ndarray (H,W)|(H,W,C)
     view_direction=(1, 0, 0),
     up=(0, 0, 1),                  # world-up hint
@@ -241,11 +241,11 @@ image, x, y = render_disk(
     ambient=0.15,                  # [0, 1]; floor on Lambertian shading
     background=(0, 0, 0),          # RGB 0-255 for off-disk pixels
 )
-# image: uint8 ndarray (H, W) or (H, W, C)
-# x:     length W+1 pixel-edge coords, increasing from -margin to +margin (planet radii)
-# y:     length H+1 pixel-edge coords, decreasing from +margin to -margin (matches row 0 = top)
+# image: uint8 ndarray (H, W) or (H, W, C); row 0 = top.
+# The disk occupies [-1, +1] in planet radii on both axes.
 # → Save: Image.fromarray(image).save(...)
-# → Plot: ax.pcolormesh(x, y, image); ax.set_aspect("equal")
+# → Plot: ax.imshow(image, extent=(-margin, margin, -margin, margin))
+#         ax.set_aspect("equal")
 ```
 
 ### Layer 2 — Geometry primitives

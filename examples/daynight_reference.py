@@ -49,12 +49,13 @@ def main():
                   "(lon ±180); 30° graticule")
 
     # Bottom row: three orthographic views.
+    margin = 1.05
     for col, lon in enumerate((0, 90, 180)):
         ax = fig.add_subplot(gs[1, col])
-        img, x, y = render_disk(tex, view_direction=_view_from_lon(lon),
-                                size=420,                  # flat: no sun
-                                background=(255, 255, 255))  # white off-disk
-        ax.imshow(img, extent=(x.min(), x.max(), y.min(), y.max()),
+        img = render_disk(tex, view_direction=_view_from_lon(lon),
+                          size=420, margin=margin,    # flat: no sun
+                          background=(255, 255, 255))  # white off-disk
+        ax.imshow(img, extent=(-margin, margin, -margin, margin),
                   origin="upper")
         ax.set_aspect("equal")
         ax.set_xticks([-1, 0, 1])

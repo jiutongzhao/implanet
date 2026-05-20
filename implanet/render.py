@@ -83,14 +83,11 @@ def render_disk(
     -------
     image : ndarray, uint8
         Rendered disk, shape (H, W) for grayscale or (H, W, C) for color.
-        Row 0 is the top of the image (image-space convention).
-    x : ndarray, float64
-        Pixel-edge x-coordinates in planet radii, length W+1, monotonically
-        increasing from -margin to +margin.
-    y : ndarray, float64
-        Pixel-edge y-coordinates in planet radii, length H+1, monotonically
-        decreasing from +margin to -margin (matches image row order, so
-        y[0] = +margin is the top edge of row 0).
+        Row 0 is the top of the image (image-space convention). The disk
+        occupies ``[-1, +1]`` planet radii on both axes; off-disk pixels
+        are filled with `background` (or transparent for RGBA textures).
+        To plot with `matplotlib.imshow`, use
+        ``extent=(-margin, +margin, -margin, +margin)``.
 
     Parameters
     ----------
@@ -125,27 +122,27 @@ def render_disk(
     texture path straight in — no need to open it yourself):
 
         >>> from PIL import Image
-        >>> img, x, y = render_disk("maps/data/earth_bluemarble_5400x2700.jpg",
-        ...                         view_direction=(-1, 0, 0), size=400)
+        >>> img = render_disk("maps/data/earth_bluemarble_5400x2700.jpg",
+        ...                   view_direction=(-1, 0, 0), size=400)
         >>> Image.fromarray(img).save("earth.png")
 
-    Plot with matplotlib pcolormesh (x, y are pixel-edge coordinates in
-    planet radii, so the disk lands at [-1, +1] on both axes):
+    Plot with matplotlib `imshow` — the disk lands at [-1, +1] on both
+    axes, with a small `margin` cushion around it:
 
         >>> import matplotlib.pyplot as plt
-        >>> img, x, y = render_disk(tex, view_direction=(-1, 0, 0),
-        ...                         sun_direction=(1, 0, 0))
+        >>> img = render_disk(tex, view_direction=(-1, 0, 0),
+        ...                   sun_direction=(1, 0, 0), margin=1.05)
         >>> fig, ax = plt.subplots()
-        >>> ax.pcolormesh(x, y, img)
+        >>> ax.imshow(img, extent=(-1.05, 1.05, -1.05, 1.05))
         >>> ax.set_aspect("equal")
 
     Use SPICE for both vectors:
 
         >>> from implanet import sun_direction
         >>> sun = sun_direction("Mars", "2026-05-14T12:00:00")
-        >>> img, x, y = render_disk(mars_tex,
-        ...                         view_direction=(-1, 0, 0),
-        ...                         sun_direction=sun)
+        >>> img = render_disk(mars_tex,
+        ...                   view_direction=(-1, 0, 0),
+        ...                   sun_direction=sun)
         >>> img.shape, img.dtype
         ((512, 512, 3), dtype('uint8'))
     """
@@ -186,14 +183,7 @@ def render_disk(
 
     if out.shape[-1] == 1:
         out = out[..., 0]
-
-    h, w = out.shape[:2]
-    radius = 0.5 * min(h, w) / margin
-    cx = (w - 1) / 2.0
-    cy = (h - 1) / 2.0
-    x_edges = (np.arange(w + 1, dtype=np.float64) - 0.5 - cx) / radius
-    y_edges = -(np.arange(h + 1, dtype=np.float64) - 0.5 - cy) / radius
-    return out, x_edges, y_edges
+    return out
 
 
 def render_flatmap(

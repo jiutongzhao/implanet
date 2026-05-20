@@ -56,27 +56,14 @@ def test_sphere_to_uv_roundtrip_known_points():
 def test_render_returns_correct_shape_and_dtype():
     tex = np.zeros((100, 200, 3), dtype=np.uint8)
     tex[..., 0] = 200
-    out, x, y = render_disk(tex, size=64)
+    out = render_disk(tex, size=64)
     assert out.shape == (64, 64, 3)
     assert out.dtype == np.uint8
-    assert x.shape == (65,)
-    assert y.shape == (65,)
-
-
-def test_render_disk_xy_edges_span_margin():
-    tex = np.full((50, 100, 3), 200, dtype=np.uint8)
-    _, x, y = render_disk(tex, size=64, margin=1.05)
-    np.testing.assert_allclose(x[0], -1.05, atol=1e-12)
-    np.testing.assert_allclose(x[-1], +1.05, atol=1e-12)
-    np.testing.assert_allclose(y[0], +1.05, atol=1e-12)    # top edge of row 0
-    np.testing.assert_allclose(y[-1], -1.05, atol=1e-12)   # bottom edge of last row
-    assert np.all(np.diff(x) > 0)
-    assert np.all(np.diff(y) < 0)
 
 
 def test_render_background_outside_disk():
     tex = np.full((100, 200, 3), 200, dtype=np.uint8)
-    out, _, _ = render_disk(
+    out = render_disk(
         tex, size=64, margin=1.5, background=(10, 20, 30),
     )
     # Corner pixel is definitely outside the disk.
@@ -93,7 +80,7 @@ def test_render_picks_correct_hemisphere():
     tex[:, : w // 2] = [0, 0, 255]  # west -> blue
 
     # Camera on the +Y side looking toward -Y sees the east (red) hemisphere.
-    out, _, _ = render_disk(tex, view_direction=(0, -1, 0), size=128)
+    out = render_disk(tex, view_direction=(0, -1, 0), size=128)
     center = out[64, 64]
     assert center[0] > 200 and center[2] < 50
 
@@ -182,12 +169,12 @@ def test_flatmap_terminator_lies_on_zero_cos_locus():
 def test_sun_shading_darkens_terminator():
     tex = np.full((100, 200, 3), 200, dtype=np.uint8)
     # View from +X, sun also from +X -> whole visible disk fully lit.
-    lit, _, _ = render_disk(
+    lit = render_disk(
         tex, view_direction=(-1, 0, 0), sun_direction=(1, 0, 0),
         ambient=0.0, size=128,
     )
     # View from +X, sun from -X -> visible disk in shadow (ambient only).
-    dark, _, _ = render_disk(
+    dark = render_disk(
         tex, view_direction=(-1, 0, 0), sun_direction=(-1, 0, 0),
         ambient=0.0, size=128,
     )
@@ -207,9 +194,9 @@ def test_render_accepts_image_path(tmp_path):
     Image.fromarray(tex).save(p)
 
     # str and Path both work, and match passing the array directly.
-    ref, _, _ = render_disk(tex, view_direction=(-1, 0, 0), size=64)
-    by_str, _, _ = render_disk(str(p), view_direction=(-1, 0, 0), size=64)
-    by_path, _, _ = render_disk(Path(p), view_direction=(-1, 0, 0), size=64)
+    ref = render_disk(tex, view_direction=(-1, 0, 0), size=64)
+    by_str = render_disk(str(p), view_direction=(-1, 0, 0), size=64)
+    by_path = render_disk(Path(p), view_direction=(-1, 0, 0), size=64)
     np.testing.assert_array_equal(ref, by_str)
     np.testing.assert_array_equal(ref, by_path)
 
@@ -226,7 +213,7 @@ def test_render_coerces_palette_image(tmp_path):
     p = tmp_path / "pal.png"
     Image.fromarray(tex).convert("P").save(p)
 
-    img, _, _ = render_disk(p, view_direction=(-1, 0, 0),
+    img = render_disk(p, view_direction=(-1, 0, 0),
                             up=(0, 1, 0), size=64)
     assert img.ndim == 3 and img.shape[-1] == 3   # RGB, not index plane
     assert int(img.max()) > 100                   # real colour values

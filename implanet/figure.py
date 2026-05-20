@@ -92,7 +92,7 @@ def plot_planet(
     """
     import matplotlib.pyplot as plt
 
-    arr, _, _ = render_disk(
+    arr = render_disk(
         texture,
         view_direction=view_direction,
         up=up,

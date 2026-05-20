@@ -15,7 +15,7 @@ from implanet import render_disk
 
 
 def render_disk_pil(*args, **kwargs) -> Image.Image:
-    arr, _, _ = render_disk(*args, **kwargs)
+    arr = render_disk(*args, **kwargs)
     return Image.fromarray(arr)
 
 

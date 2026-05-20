@@ -71,7 +71,7 @@ def main(argv=None):
         view = (-1.0, 0.0, 0.0)  # default: looking at lat=0, lon=0
 
     tex = Image.open(args.texture)
-    arr, _, _ = render_disk(
+    arr = render_disk(
         tex,
         view_direction=view,
         up=args.up,

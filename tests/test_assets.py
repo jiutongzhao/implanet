@@ -138,9 +138,9 @@ def test_synthetic_daynight_texture(monkeypatch, tmp_path):
     # under the overlaid graticule.
     assert {110, 245}.issubset(set(np.unique(arr[..., 0])))
 
-    day, _, _ = render_disk(Image.open(p).convert("RGB"),
+    day = render_disk(Image.open(p).convert("RGB"),
                             view_direction=(-1, 0, 0), size=128)
-    night, _, _ = render_disk(Image.open(p).convert("RGB"),
+    night = render_disk(Image.open(p).convert("RGB"),
                               view_direction=(1, 0, 0), size=128)
     # Grid-tolerant whole-disk means (default black off-disk pulls both
     # down equally). Day is clearly brighter; the shaded side is
