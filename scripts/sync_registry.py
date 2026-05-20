@@ -14,6 +14,8 @@ import shutil
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 REPO = Path(__file__).resolve().parent.parent
 SRC = REPO / "maps"
 DST = REPO / "implanet" / "assets" / "data"
@@ -35,6 +37,13 @@ def main() -> int:
         print(f"  synced: {', '.join(changed)} -> {DST}")
     else:
         print("  registries already in sync")
+
+    # Always refresh ATTRIBUTION.md too — it's derived from the same
+    # registries, and tests assert it stays current.
+    from build_attribution import main as build_attribution
+    rc = build_attribution()
+    if rc != 0:
+        return rc
     return 0
 
 

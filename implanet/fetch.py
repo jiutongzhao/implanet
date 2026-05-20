@@ -25,7 +25,7 @@ from pathlib import Path
 
 from implanet.assets import maps_dir
 from implanet.assets._cache import _human, download
-from implanet.assets._registry import texture_entries
+from implanet.assets._registry import texture_entries, texture_license_notes
 
 LARGE_THRESHOLD = 200 * 1024 * 1024  # 200 MB
 
@@ -54,6 +54,32 @@ def cmd_list(entries):
         variant = e.get("variant", "primary")
         print(f"{e['body']:<10} {variant:<26} {e['agency']:<10} "
               f"{size:<10} {status}")
+
+
+def cmd_cite(entries):
+    """Print license + citation info for the filtered entries.
+
+    Cite *both* the texture provider (the immediate source we redistribute
+    via the catalogue) and the underlying mission/instrument when
+    publishing figures."""
+    notes = texture_license_notes()
+    if notes:
+        print("UMBRELLA LICENSE NOTES")
+        print("-" * 22)
+        import textwrap
+        for line in textwrap.wrap(notes, width=78):
+            print(line)
+        print()
+    for e in entries:
+        head = f"{e['body']} / {e.get('variant', '')}"
+        print(head)
+        print("=" * len(head))
+        for key in ("agency", "mission", "instrument", "provenance",
+                    "license", "citation", "portal_url", "note"):
+            v = e.get(key)
+            if v:
+                print(f"  {key:<11}: {v}")
+        print()
 
 
 def cmd_fetch(entries, include_large: bool):
@@ -115,6 +141,17 @@ def cmd_fetch(entries, include_large: bool):
             if e.get("note"):
                 print(f"    note: {e['note']}")
 
+    if succeeded:
+        print("\nSources used — please cite when publishing figures:")
+        for e, _dest in succeeded:
+            lic = e.get("license", "see registry")
+            cite = e.get("citation") or e.get("provenance") or ""
+            print(f"  {e['body']:<10} {e.get('variant', ''):<22} {lic}")
+            if cite:
+                print(f"             cite: {cite}")
+        print("  (full block: implanet-fetch --cite  /  "
+              "python -c 'import implanet; implanet.show_attribution()')")
+
     return 0 if not failed else 1
 
 
@@ -124,6 +161,9 @@ def main(argv=None):
     )
     p.add_argument("--list", action="store_true",
                    help="Print manifest entries and exit (no download).")
+    p.add_argument("--cite", action="store_true",
+                   help="Print license + citation info for the matched "
+                        "entries and exit (no download).")
     p.add_argument("--where", action="store_true",
                    help="Print the resolved maps directory and exit.")
     p.add_argument("--body", help="Filter by body name (e.g. Moon).")
@@ -154,6 +194,9 @@ def main(argv=None):
 
     if args.list:
         cmd_list(entries)
+        return 0
+    if args.cite:
+        cmd_cite(entries)
         return 0
     return cmd_fetch(entries, args.include_large)
 

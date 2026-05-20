@@ -34,8 +34,10 @@ from implanet.assets._registry import (
     find_kernel,
     find_texture,
     kernel_entries,
+    kernel_license_notes,
     kernel_registry,
     texture_entries,
+    texture_license_notes,
     texture_registry,
 )
 
@@ -55,6 +57,10 @@ __all__ = [
     "find_kernel",
     "list_maps",
     "show_maps",
+    "attribution",
+    "show_attribution",
+    "texture_license_notes",
+    "kernel_license_notes",
 ]
 
 
@@ -127,8 +133,27 @@ def get_texture(body: str, variant: Optional[str] = None, *,
             f"Texture {body}/{e.get('variant')} is manual-only "
             f"(no asset_url). Obtain it from: {e.get('portal_url')}"
         )
-    return download(url, dest,
+    path = download(url, dest,
                     expected_size=e.get("size_bytes_estimated"), quiet=quiet)
+    if not quiet:
+        _print_citation_hint(e)
+    return path
+
+
+def _print_citation_hint(entry: dict) -> None:
+    """One-line license + citation note, printed to stderr on a fresh
+    texture download so users don't miss attribution requirements."""
+    import sys
+    lic = entry.get("license") or "see registry"
+    cite = entry.get("citation") or entry.get("provenance") or ""
+    body = entry.get("body", "?")
+    variant = entry.get("variant", "")
+    head = f"[implanet] {body}/{variant} license: {lic}"
+    print(head, file=sys.stderr)
+    if cite:
+        print(f"[implanet] cite: {cite}", file=sys.stderr)
+    print("[implanet] full attribution: implanet.show_attribution"
+          f"({body!r})", file=sys.stderr)
 
 
 def _status(entry: dict, cached: bool) -> str:
@@ -207,3 +232,85 @@ def show_maps(body: Optional[str] = None,
         print(f"{m['body']:<10} {str(m['variant'] or ''):<26} "
               f"{str(m['agency'] or ''):<9} {str(m['resolution'] or ''):<11} "
               f"{size:<9} {m['status']}")
+
+
+def attribution(body: str, variant: Optional[str] = None) -> dict:
+    """Return the citation / license info for a texture.
+
+    Pulled directly from ``maps/manifest.json`` so it stays in sync with
+    the catalogue. The returned dict has these fields (any may be empty
+    if the registry doesn't supply them):
+
+      ``body, variant, agency, mission, instrument, provenance,
+      license, citation, portal_url, asset_url, note,
+      umbrella_license_notes``
+
+    The last field is the top-level note that applies to *all* textures
+    (agency-level terms — e.g. NASA public domain, ESA CC BY-SA 3.0
+    IGO, JAXA-specific terms). Cite **both** the texture provider and
+    the underlying mission/instrument when publishing.
+
+    Examples
+    --------
+        >>> from implanet import attribution
+        >>> a = attribution("Mars")
+        >>> a["license"], a["citation"]      # doctest: +SKIP
+    """
+    e = find_texture(body, variant)
+    return {
+        "body": e.get("body"),
+        "variant": e.get("variant"),
+        "agency": e.get("agency"),
+        "mission": e.get("mission"),
+        "instrument": e.get("instrument"),
+        "provenance": e.get("provenance"),
+        "license": e.get("license"),
+        "citation": e.get("citation"),
+        "portal_url": e.get("portal_url"),
+        "asset_url": e.get("asset_url"),
+        "note": e.get("note"),
+        "umbrella_license_notes": texture_license_notes(),
+    }
+
+
+def show_attribution(body: Optional[str] = None) -> None:
+    """Print the citation / license block for one body, or for all
+    textures if ``body`` is None.
+
+    Use this *before publishing* any figure made with implanet — the
+    text shown is what you should reproduce (or paraphrase) as the
+    figure source line, plus the upstream mission credit.
+
+    Examples
+    --------
+        >>> import implanet
+        >>> implanet.show_attribution("Mars")
+        >>> implanet.show_attribution()      # all entries
+    """
+    notes = texture_license_notes()
+    if notes:
+        print("UMBRELLA LICENSE NOTES")
+        print("-" * 22)
+        # Wrap the umbrella note to ~80 cols for readability.
+        import textwrap
+        for line in textwrap.wrap(notes, width=78):
+            print(line)
+        print()
+
+    entries = list(texture_entries())
+    if body:
+        body_l = body.lower()
+        entries = [e for e in entries if e["body"].lower() == body_l]
+        if not entries:
+            raise KeyError(f"No texture for body {body!r} in manifest.json")
+
+    for e in entries:
+        head = f"{e['body']} / {e.get('variant', '')}"
+        print(head)
+        print("=" * len(head))
+        for key in ("agency", "mission", "instrument", "provenance",
+                    "license", "citation", "portal_url", "note"):
+            v = e.get(key)
+            if v:
+                print(f"  {key:<11}: {v}")
+        print()

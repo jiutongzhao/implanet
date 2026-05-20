@@ -150,6 +150,64 @@ def test_synthetic_daynight_texture(monkeypatch, tmp_path):
     assert 60 < night.mean() < 170
 
 
+def test_attribution_returns_required_fields():
+    """Per-entry attribution dict has all citation fields wired up
+    (any single field may legitimately be empty in the registry; here
+    we assert the *keys* exist and the umbrella note is non-empty)."""
+    from implanet import attribution
+    a = attribution("Mars")
+    for field in ("body", "variant", "agency", "mission", "instrument",
+                  "provenance", "license", "citation", "portal_url",
+                  "asset_url", "note", "umbrella_license_notes"):
+        assert field in a, f"attribution() missing field {field}"
+    assert a["body"] == "Mars"
+    assert a["umbrella_license_notes"]            # top-level note present
+    assert a["license"]                            # the texture has a license
+    assert a["citation"]                           # and a citation string
+
+
+def test_attribution_for_specific_variant():
+    from implanet import attribution
+    a = attribution("Earth", "natural_earth3")
+    assert a["variant"] == "natural_earth3"
+    assert "Natural Earth" in a["citation"]
+
+
+def test_show_attribution_prints_umbrella_and_entry(capsys):
+    from implanet import show_attribution
+    show_attribution("Mars")
+    out = capsys.readouterr().out
+    assert "UMBRELLA LICENSE NOTES" in out
+    assert "Mars" in out
+    assert "license" in out
+    assert "citation" in out
+
+
+def test_attribution_md_in_sync_with_registries(tmp_path, monkeypatch):
+    """ATTRIBUTION.md at the repo root must stay in lockstep with the
+    JSON registries — re-run `python scripts/build_attribution.py`
+    after editing manifest/kernels."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "build_attribution", REPO / "scripts" / "build_attribution.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    # Redirect OUT to a temp path, regenerate, and diff against the
+    # committed file.
+    fresh = tmp_path / "ATTRIBUTION.md"
+    monkeypatch.setattr(mod, "OUT", fresh)
+    rc = mod.main()
+    assert rc == 0
+
+    committed = REPO / "ATTRIBUTION.md"
+    assert committed.is_file(), "ATTRIBUTION.md missing — run scripts/build_attribution.py"
+    assert fresh.read_text() == committed.read_text(), (
+        "ATTRIBUTION.md drift — run `python scripts/build_attribution.py`"
+    )
+
+
 def test_manual_only_texture_raises(monkeypatch, tmp_path):
     monkeypatch.setenv("IMPLANET_CACHE", str(tmp_path))
     monkeypatch.delenv("IMPLANET_MAPS", raising=False)

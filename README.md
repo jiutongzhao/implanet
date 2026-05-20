@@ -466,17 +466,41 @@ EPOCH="2025-12-21T18:00:00" python examples/scientific_figures.py
 
 The `EPOCH` env var feeds straight into `spice.str2et`.
 
-## Citing
+## Attribution & citation
 
-For a scientific figure, cite **both** the immediate texture source and
-the underlying mission. The manifest's `citation` field already provides
-the right phrasing per entry; e.g.:
+`implanet` itself is MIT-licensed. The **maps and SPICE kernels** are
+**not** our work — they're redistributions of public-domain or
+Creative-Commons assets from NASA, ESA, JAXA, CNSA, USGS, and a few
+community texture providers. The terms of those upstream sources apply.
+
+**If you use any rendered figure in a paper or talk, credit both the
+mission/instrument and the texture provider.** The manifest's `citation`
+field gives the right phrasing per map; e.g.:
 
 > Solar System Scope (CC BY 4.0). Underlying data: NASA MGS MOLA team;
 > Viking Orbiter; USGS Astrogeology.
 
-When in doubt, the rendering itself is just orthography on top of an
-equirectangular sample — credit goes to whoever made the map.
+You can read the citation block at runtime so it stays in sync with the
+catalogue:
+
+```python
+import implanet
+implanet.show_attribution("Mars")    # one body, pretty-printed
+implanet.show_attribution()          # all 41 entries
+implanet.attribution("Earth", "natural_earth3")   # → dict
+```
+
+```bash
+implanet-fetch --cite                # citation block from the CLI
+implanet-fetch --cite --body Mars    # filtered
+```
+
+The first time `get_texture(body)` downloads a map, a one-line license
++ cite hint is printed to stderr so the requirement is hard to miss.
+
+For the full block of every catalogued texture and SPICE kernel see
+[`ATTRIBUTION.md`](ATTRIBUTION.md) at the repo root (regenerable via
+`python scripts/build_attribution.py`).
 
 ## Tests
 

@@ -9,7 +9,15 @@ from implanet.overlays import (
     subobserver_point,
     terminator_segments,
 )
-from implanet.assets import get_texture, list_maps, show_maps
+from implanet.assets import (
+    attribution,
+    get_texture,
+    kernel_license_notes,
+    list_maps,
+    show_attribution,
+    show_maps,
+    texture_license_notes,
+)
 
 __all__ = [
     "render_disk",
@@ -25,6 +33,10 @@ __all__ = [
     "get_texture",
     "list_maps",
     "show_maps",
+    "attribution",
+    "show_attribution",
+    "texture_license_notes",
+    "kernel_license_notes",
 ]
 
 # Ephemeris support requires the optional `spiceypy` dependency. Import
