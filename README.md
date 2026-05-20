@@ -103,35 +103,14 @@ info["camera"]["sub_observer_lat_deg"], info["camera"]["sub_observer_lon_deg"]  
 info["sun"]["sub_solar_lat_deg"], info["sun"]["sub_solar_lon_deg"]              # (16.7, 0.0)
 ```
 
-For a publication-style figure (white background, dashed lat/lon grid,
-axis ticks in planet radii):
-
-```python
-from implanet import get_texture
-from implanet.figure import plot_planet
-fig, ax = plot_planet(get_texture("Earth"),
-                      view_direction=(-1,-0.2,-0.3),
-                      sun_direction=(1,0.5,0.4),
-                      body_name="Earth",
-                      source_text="NASA Visible Earth · Blue Marble")
-fig.savefig("earth_scientific.png", dpi=140, bbox_inches="tight")
-```
-
-Result — a publication-style figure with dashed graticule, the
-day-night terminator as a white dashed arc, a red `+` at the
-sub-observer point, and sub-obs / sub-solar coordinates in the
-footer:
-
-<p align="center">
-<img src="docs/figures/quickstart/earth_scientific_quickstart.png" alt="quick-start earth_scientific.png" width="380">
-</p>
-
-With real ephemerides:
+With real ephemerides — SPICE drives the sun direction and the
+sub-solar point, you compose a `view_direction` around it, and
+`render_disk` does the rest:
 
 ```python
 import math
-from implanet import sun_direction, sub_solar_point, get_texture
-from implanet.figure import plot_planet
+from PIL import Image
+from implanet import render_disk, sun_direction, sub_solar_point, get_texture
 
 utc = "2026-05-14T12:00:00"
 sun = sun_direction("Mars", utc)
@@ -143,19 +122,15 @@ view = (-math.cos(lat_cam)*math.cos(lon_cam),
         -math.cos(lat_cam)*math.sin(lon_cam),
         -math.sin(lat_cam))
 
-fig, _ = plot_planet(get_texture("Mars"),
-                     view_direction=view, sun_direction=sun,
-                     title=f"Mars  {utc} UTC")
-fig.savefig("mars.png")
+img = render_disk(get_texture("Mars"),
+                  view_direction=view, sun_direction=sun, size=600)
+Image.fromarray(img).save("mars.png")
 ```
 
 Result — Mars at `2026-05-14T12:00:00 UTC`. SPICE puts the sub-solar
-point at (−24.6°, −160.2°); the camera sits 30° west of that, so the
-terminator (white dashed arc) is visibly clipping off the right limb:
+point at (−24.6°, −160.2°) on that date; the camera is 30° west of
+that, so the terminator slices across the right side of the disk.
 
-<p align="center">
-<img src="docs/figures/quickstart/mars_spice_quickstart.png" alt="quick-start mars.png" width="380">
-</p>
 
 ## Examples
 
@@ -182,23 +157,10 @@ Built by <code>examples/earth_dayside.py</code>.</sub>
 </tr>
 <tr>
 <td width="50%" align="center">
-<img src="docs/figures/voyager1_jupiter.png" alt="Voyager 1 Jupiter flyby" width="100%"><br>
-<sub><b>Voyager 1 Jupiter flyby (1979-03-05)</b> — camera from the
-reconstructed spacecraft SPK kernel.
-Built by <code>examples/voyager1_jupiter.py</code>.</sub>
-</td>
-<td width="50%" align="center">
-<img src="docs/figures/new_horizons_pluto.png" alt="New Horizons Pluto flyby" width="100%"><br>
-<sub><b>New Horizons Pluto flyby (2015-07-14)</b> — closest-approach
-geometry from <code>nh_recon_pluto_od122_v01.bsp</code>.
-Built by <code>examples/new_horizons_pluto.py</code>.</sub>
-</td>
-</tr>
-<tr>
-<td width="50%" align="center">
-<img src="docs/figures/voyager2_neptune.png" alt="Voyager 2 Neptune flyby" width="100%"><br>
-<sub><b>Voyager 2 Neptune flyby (1989-08-25)</b> — exact closest-approach
-geometry. Built by <code>examples/voyager2_neptune.py</code>.</sub>
+<img src="docs/figures/earth_natural_earth3.png" alt="Natural Earth III variant" width="100%"><br>
+<sub><b>Natural Earth III variant</b> — the more vivid Earth texture
+option (<code>get_texture("Earth", "natural_earth3")</code>).
+Built by <code>examples/earth_dayside.py</code>.</sub>
 </td>
 <td width="50%" align="center">
 <img src="docs/figures/reference_daynight.png" alt="synthetic day/night reference" width="100%"><br>
@@ -377,9 +339,8 @@ channel count.
 
 The work is dominated by the `H × W` bilinear gather, which is a
 constant 4 lookups per pixel. A 720×720 render of an 8K texture takes
-~50 ms on this machine; the full ~30-figure scientific batch
-(`examples/scientific_figures.py`) runs in under a minute including
-SPICE calls.
+~50 ms on this machine; SPICE-driven calls (`sun_direction`,
+`sub_solar_point`) add a few ms each after kernels are cached.
 
 ## API
 
@@ -473,53 +434,7 @@ flatmap_terminator(sun_direction, rotation_lon_deg=0.0, samples=721)
     # → (xs, ys) lon/lat-space terminator for render_flatmap output
 ```
 
-### Layer 4 — Figure helper
-
-```python
-from implanet.figure import plot_planet
-
-plot_planet(
-    texture,
-    view_direction=(-1, 0, 0),
-    up=(0, 0, 1),
-    sun_direction=None,
-    ambient=0.1,
-    size=720, margin=1.08, lon0=-math.pi,
-    *,                                # keyword-only ↓
-    title=None,
-    body_name=None,
-    source_text=None,                 # bottom-right attribution
-    lat_step_deg=30.0, lon_step_deg=30.0,
-    graticule_color="0.25",
-    graticule_alpha=0.55,
-    graticule_lw=0.7,
-    show_limb=True,
-    show_subobserver=True,
-    show_terminator=True,             # only drawn if sun_direction is set
-    terminator_color="white",
-    terminator_lw=1.2,
-    terminator_ls="--",
-    terminator_alpha=0.95,
-    figsize=(6.5, 6.5), dpi=150,
-    ax=None,                          # plot into an existing axes if given
-)   # → (fig, ax)
-```
-
-Produces:
-
-- white background
-- equirectangular disk via `imshow` with `extent=(-margin, +margin)`
-- dashed parallel/meridian segments (every 30° by default), clipped at the limb
-- black limb circle
-- white dashed arc along the **day-night terminator** (the great circle
-  where `P · sun_unit = 0`), clipped at the limb — only drawn when
-  `sun_direction` is supplied
-- red `+` at the sub-observer point
-- ticks at `[-1, -0.5, 0, +0.5, +1]` labeled in planet radii
-- caption: `sub-observer (lat, lon)` and (if `sun_direction` given) `sub-solar (lat, lon)`
-- title and attribution slots
-
-### Layer 5 — Ephemeris (optional)
+### Layer 4 — Ephemeris (optional)
 
 ```python
 from implanet import (
@@ -629,29 +544,34 @@ Titan's default, ESA HRSC Mars, JAXA Kaguya, CNSA mosaics, full-res USGS;
 
 ## Reproducing the demo figures
 
-Three independent scripts under `examples/`:
+Scripts under `examples/`:
 
 ```bash
-# 31 individual publication-style panels, one per local texture
-python examples/scientific_figures.py
-# → examples/figures_scientific/<body>_<variant>.png
+# Quick PIL-only rotation/terminator/pole grids
+python examples/figures.py            # → examples/figures/*.png
 
-# 5 side-by-side comparisons (Earth, Moon, Mars, Venus, Jupiter)
-python examples/comparison_figures.py
-# → examples/figures_comparison/<body>_variants.png
+# Animated rotation / sub-solar drift GIFs
+python examples/animations.py         # → examples/animations/*.gif
 
-# Quick PIL-only rotation/terminator/pole grids, no matplotlib
-python examples/figures.py
-# → examples/figures/*.png
+# Per-body equirectangular flatmap re-renders with shading
+python examples/flatmap_figures.py    # → examples/figures_flatmap/*.png
+
+# A transparent RGBA disk per body, on an exact [-1,1] grid
+python examples/transparent_disks.py  # → examples/figures_transparent/*.png
+
+# Synthetic day/night reference grid (no download)
+python examples/daynight_reference.py
+
+# A single sunlit-Earth render driven by SPICE
+python examples/earth_dayside.py
+
+# Three quick views: front / side / pole-down
+python examples/demo.py
 ```
 
-Pick a different epoch:
-
-```bash
-EPOCH="2025-12-21T18:00:00" python examples/scientific_figures.py
-```
-
-The `EPOCH` env var feeds straight into `spice.str2et`.
+All examples write into `examples/<some-output-dir>/` which is
+git-ignored; the committed showcase set lives under
+[`docs/figures/`](docs/figures/).
 
 ## Attribution & citation
 
@@ -761,7 +681,6 @@ implanet/
 ├── projection.py          # camera_basis, orthographic_rays, sphere_to_uv
 ├── render.py              # render_disk, render_flatmap, render_info
 ├── overlays.py            # graticule/limb/terminator/subobserver
-├── figure.py              # plot_planet  (matplotlib)
 ├── ephemeris.py           # SPICE wrappers  (spiceypy)
 ├── fetch.py               # `implanet-fetch` console script
 ├── cli.py                 # `implanet` console script
@@ -781,7 +700,8 @@ scripts/                   # fetch_maps.py / sync_registry.py /
                            # build_attribution.py (dev helpers)
 ATTRIBUTION.md             # human-browseable license/citation index,
                            # regenerated from manifest.json + kernels.json
-examples/                  # demo.py, scientific_figures.py, flatmap_figures.py,
-                           # transparent_disks.py, per-mission flybys, …
+examples/                  # demo.py, figures.py, animations.py,
+                           # flatmap_figures.py, transparent_disks.py,
+                           # earth_dayside.py, daynight_reference.py
 tests/                     # test_render.py, test_assets.py, test_ephemeris.py
 ```
