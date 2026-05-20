@@ -63,6 +63,13 @@ Image.fromarray(img).save("earth.png")
 #   ax.set_aspect("equal")
 ```
 
+Result — a 600×600 RGB PNG, half-lit Earth with the terminator running
+through the middle:
+
+<p align="center">
+<img src="docs/figures/quickstart/earth_quickstart.png" alt="quick-start earth.png" width="320">
+</p>
+
 `get_texture(body, variant=None)` picks the body's default map; pass a
 variant for a specific one, e.g. `get_texture("Earth", "natural_earth3")`.
 
@@ -76,13 +83,25 @@ info = render_info(get_texture("Mars"),
                    view_direction=(-1, 0, 0),
                    sun_direction=(1, 0, 0.3))
 print(info["caption"])
-# Mars / sss · sub-obs 0°N 0°E · sun (1.00, 0.00, 0.30) · Solar System Scope (CC BY 4.0). Underlying data: NASA MGS MOLA team; …
+```
+
+Result:
+
+```
+Mars / sss · sub-obs 0°N 0°E · sun (1.00, 0.00, 0.30) · Solar System Scope (CC BY 4.0). Underlying data: NASA MGS MOLA team; Viking Orbiter; USGS Astrogeology.
 ```
 
 The dict also carries `texture` (body / variant / mission / citation /
 license — only populated when the texture path is in the manifest),
 `camera` (sub-observer lat/lon), `sun` (sub-solar lat/lon, ambient),
-and `output` (size / margin / lon0).
+and `output` (size / margin / lon0). For this call:
+
+```python
+info["texture"]["body"]     # 'Mars'
+info["texture"]["variant"]  # 'sss'
+info["camera"]["sub_observer_lat_deg"], info["camera"]["sub_observer_lon_deg"]  # (0.0, 0.0)
+info["sun"]["sub_solar_lat_deg"], info["sun"]["sub_solar_lon_deg"]              # (16.7, 0.0)
+```
 
 For a publication-style figure (white background, dashed lat/lon grid,
 axis ticks in planet radii):
@@ -97,6 +116,15 @@ fig, ax = plot_planet(get_texture("Earth"),
                       source_text="NASA Visible Earth · Blue Marble")
 fig.savefig("earth_scientific.png", dpi=140, bbox_inches="tight")
 ```
+
+Result — a publication-style figure with dashed graticule, the
+day-night terminator as a white dashed arc, a red `+` at the
+sub-observer point, and sub-obs / sub-solar coordinates in the
+footer:
+
+<p align="center">
+<img src="docs/figures/quickstart/earth_scientific_quickstart.png" alt="quick-start earth_scientific.png" width="380">
+</p>
 
 With real ephemerides:
 
@@ -120,6 +148,14 @@ fig, _ = plot_planet(get_texture("Mars"),
                      title=f"Mars  {utc} UTC")
 fig.savefig("mars.png")
 ```
+
+Result — Mars at `2026-05-14T12:00:00 UTC`. SPICE puts the sub-solar
+point at (−24.6°, −160.2°); the camera sits 30° west of that, so the
+terminator (white dashed arc) is visibly clipping off the right limb:
+
+<p align="center">
+<img src="docs/figures/quickstart/mars_spice_quickstart.png" alt="quick-start mars.png" width="380">
+</p>
 
 ## Examples
 
