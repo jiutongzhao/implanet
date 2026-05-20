@@ -121,6 +121,61 @@ fig, _ = plot_planet(get_texture("Mars"),
 fig.savefig("mars.png")
 ```
 
+## Examples
+
+A small curated showcase of `implanet` output. Each figure is
+regenerable from a script in `examples/`; the full output trees there
+are git-ignored, only this hand-picked set is committed under
+[`docs/figures/`](docs/figures/).
+
+<table>
+<tr>
+<td width="50%" align="center">
+<img src="docs/figures/transparent_disks_overview.png" alt="transparent disks overview" width="100%"><br>
+<sub><b>Every body, one view</b> — every body's default texture as a
+transparent RGBA disk on an exact [-1,1] grid (equator view). Built by
+<code>examples/transparent_disks.py</code>.</sub>
+</td>
+<td width="50%" align="center">
+<img src="docs/figures/earth_dayside_spice.png" alt="earth dayside, SPICE-driven" width="100%"><br>
+<sub><b>SPICE-driven illumination</b> — fully sunlit Earth at
+<code>2026-04-03T00:27:39 UTC</code> (Pacific facing the Sun);
+sub-solar = sub-observer.
+Built by <code>examples/earth_dayside.py</code>.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center">
+<img src="docs/figures/voyager1_jupiter.png" alt="Voyager 1 Jupiter flyby" width="100%"><br>
+<sub><b>Voyager 1 Jupiter flyby (1979-03-05)</b> — camera from the
+reconstructed spacecraft SPK kernel.
+Built by <code>examples/voyager1_jupiter.py</code>.</sub>
+</td>
+<td width="50%" align="center">
+<img src="docs/figures/new_horizons_pluto.png" alt="New Horizons Pluto flyby" width="100%"><br>
+<sub><b>New Horizons Pluto flyby (2015-07-14)</b> — closest-approach
+geometry from <code>nh_recon_pluto_od122_v01.bsp</code>.
+Built by <code>examples/new_horizons_pluto.py</code>.</sub>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center">
+<img src="docs/figures/voyager2_neptune.png" alt="Voyager 2 Neptune flyby" width="100%"><br>
+<sub><b>Voyager 2 Neptune flyby (1989-08-25)</b> — exact closest-approach
+geometry. Built by <code>examples/voyager2_neptune.py</code>.</sub>
+</td>
+<td width="50%" align="center">
+<img src="docs/figures/reference_daynight.png" alt="synthetic day/night reference" width="100%"><br>
+<sub><b>Synthetic day/night reference</b> — built locally (no download)
+to verify viewing geometry / lighting / sub-solar lookups.
+Built by <code>examples/daynight_reference.py</code>.</sub>
+</td>
+</tr>
+</table>
+
+A full index (with regenerate commands) lives at
+[`docs/figures/README.md`](docs/figures/README.md).
+
 ## Conventions
 
 All vectors live in the **body-fixed IAU frame** of the rendered body:
@@ -597,6 +652,52 @@ The first time `get_texture(body)` downloads a map, a one-line license
 For the full block of every catalogued texture and SPICE kernel see
 [`ATTRIBUTION.md`](ATTRIBUTION.md) at the repo root (regenerable via
 `python scripts/build_attribution.py`).
+
+## References
+
+If you use `implanet` in published work, please cite the package and
+the upstream tooling it builds on. **The maps and SPICE kernels each
+carry their own citation** — see the
+[Attribution & citation](#attribution--citation) section above and the
+per-entry `citation` field in `maps/manifest.json` (also exposed via
+`implanet.show_attribution(...)` and as a one-liner in
+`render_info(...)["caption"]`).
+
+**Citing implanet**
+
+```bibtex
+@software{implanet,
+  title  = {implanet: orthographic planet renderer with SPICE-driven sun lighting},
+  author = {Zhao, Jiutong},
+  year   = {2026},
+  url    = {https://github.com/jiutongzhao/implanet},
+  note   = {MIT-licensed Python package}
+}
+```
+
+**SPICE / NAIF.** The ephemeris layer (`implanet.ephemeris`) wraps the
+NAIF SPICE toolkit through `spiceypy`. If you publish a result that
+relies on `sun_direction`, `sub_solar_point`, or any mission SPK in
+this catalogue, cite:
+
+> Acton, C. H. (1996). *Ancillary data services of NASA's Navigation
+> and Ancillary Information Facility.* Planetary and Space Science,
+> 44(1), 65–70. <https://doi.org/10.1016/0032-0633(95)00107-7>
+
+> Acton, C., Bachman, N., Semenov, B., & Wright, E. (2018). *A look
+> towards the future in the handling of space science mission
+> geometry.* Planetary and Space Science, 150, 9–12.
+> <https://doi.org/10.1016/j.pss.2017.02.013>
+
+**Rendering pipeline.** The orthographic projection + Lambertian
+shading + bilinear sampling here is textbook computer-graphics
+machinery; consult any introductory CG text (e.g. Foley et al.,
+*Computer Graphics: Principles and Practice*) for derivations.
+
+**Data sources.** Catalogued in
+[`ATTRIBUTION.md`](ATTRIBUTION.md) — one entry per texture + SPICE
+kernel, with provenance, license, and citation text. Always cite the
+mission/instrument **and** the texture provider in figure captions.
 
 ## Tests
 
