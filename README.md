@@ -27,12 +27,14 @@ That single install pulls in numpy, Pillow, spiceypy *and* matplotlib,
 so rendering, SPICE ephemerides, and the figure layer all work out of
 the box. (Developing the package: `pip install -e .[test]` adds pytest.)
 
-Python ≥ 3.9. Two console scripts are installed:
+Python ≥ 3.9. One console script is installed:
 
 ```bash
-implanet <texture> <output> [...]            # render one disk to a file
 implanet-fetch [--list|--cite|--body …]      # bulk-download / inspect maps
 ```
+
+Everything else is a Python API — `import implanet` and call the
+functions directly.
 
 **Assets are not bundled** — textures and SPICE kernels download on first
 use. By default they live *with the package*
@@ -469,31 +471,59 @@ Uranus   Neptune Triton  Pluto   Charon
 The Sun is intentionally absent — `sun_direction("Sun", ...)` would be
 meaningless; render the Sun's texture flat with `ambient=1.0`.
 
-## Command line
+## Plotting with matplotlib
 
-```bash
-implanet <texture> <output> [options]
+`render_disk` returns a raw ndarray, so plotting is a one-liner with
+`ax.imshow` and the natural extent (the disk lives in `[-1, +1]`
+planet radii on both axes, with a `margin` cushion). The Layer-3
+overlays return plain `(xs, ys)` arrays so they drop straight onto the
+same axes — no extra glue, no matplotlib dependency in the rendering
+path:
+
+```python
+import matplotlib.pyplot as plt
+from implanet import (
+    render_disk, render_info, get_texture,
+    graticule_segments, limb_circle, terminator_segments,
+    subobserver_point,
+)
+
+view = (-1, -0.2, -0.3)
+sun  = (1, 0.5, 0.4)
+margin = 1.05
+
+img = render_disk(get_texture("Earth"),
+                  view_direction=view, sun_direction=sun,
+                  size=600, margin=margin,
+                  background="white")     # mpl color string also works
+
+fig, ax = plt.subplots(figsize=(6, 6))
+ax.imshow(img, extent=(-margin, margin, -margin, margin))
+ax.set_aspect("equal")
+ax.set_xlim(-margin, margin); ax.set_ylim(-margin, margin)
+ax.set_xlabel("x [planet radii]"); ax.set_ylabel("y [planet radii]")
+
+# Overlays — every helper returns parallel lists of polylines you can
+# loop into ax.plot(...).
+g = graticule_segments(view_direction=view, lat_step_deg=30, lon_step_deg=30)
+for xs, ys in zip(*g["parallels"]):  ax.plot(xs, ys, ":", color="0.25", lw=0.7)
+for xs, ys in zip(*g["meridians"]):  ax.plot(xs, ys, ":", color="0.25", lw=0.7)
+
+lx, ly = limb_circle()
+ax.plot(lx, ly, "-", color="black", lw=1.0)
+
+for xs, ys in zip(*terminator_segments(view_direction=view, sun_direction=sun)):
+    ax.plot(xs, ys, "--", color="white", lw=1.2)
+
+sub_lat, sub_lon = subobserver_point(view_direction=view)
+ax.set_title(render_info(get_texture("Earth"), view_direction=view,
+                         sun_direction=sun)["caption"], fontsize=8)
+fig.savefig("earth_scientific.png", dpi=140, bbox_inches="tight")
 ```
 
-`<texture>` is any image path; `<output>` is the PNG/JPG to write.
-
-| Option | Default | Meaning |
-|---|---|---|
-| `--view x,y,z` | `-1,0,0` | camera → planet center |
-| `--latlon lat,lon,0` | — | sub-camera point instead of `--view` (mutually exclusive) |
-| `--up x,y,z` | `0,0,1` | up hint (north pole) |
-| `--size N` | `512` | square edge length |
-| `--margin F` | `1.05` | padding around the disk (≥1.0) |
-| `--lon0 DEG` | `-180` | longitude of the texture's left edge |
-| `--sun x,y,z` | none | planet → Sun; omit for flat (no shading) |
-| `--ambient A` | `0.15` | night-side floor when `--sun` is set |
-| `--background r,g,b` *or* color | `0,0,0` | off-disk fill: `0,0,0` style RGB **or** a matplotlib color name/hex (`white`, `#1f77b4`, `0.25`) |
-
-```bash
-# Mars as seen from sub-point (20°N, 60°E), sun over the prime meridian
-implanet $(python -c "import implanet;print(implanet.get_texture('Mars'))") \
-         mars.png --latlon 20,60,0 --sun 1,0,0
-```
+For a flat 2:1 equirectangular plot use `render_flatmap` instead;
+`flatmap_terminator(sun_direction=…)` gives you the day-night line in
+lon/lat space to overlay with the same `ax.plot(xs, ys)` pattern.
 
 ## Map sources
 
@@ -684,7 +714,6 @@ implanet/
 ├── overlays.py            # graticule/limb/terminator/subobserver
 ├── ephemeris.py           # SPICE wrappers  (spiceypy)
 ├── fetch.py               # `implanet-fetch` console script
-├── cli.py                 # `implanet` console script
 └── assets/                # registry + lazy download/cache
     ├── __init__.py        #   get_texture, get_kernel, list_maps,
     │                      #   show_maps, attribution, show_attribution
@@ -704,5 +733,7 @@ ATTRIBUTION.md             # human-browseable license/citation index,
 examples/                  # demo.py, figures.py, animations.py,
                            # flatmap_figures.py, transparent_disks.py,
                            # earth_dayside.py, daynight_reference.py
-tests/                     # test_render.py, test_assets.py, test_ephemeris.py
+tests/                     # test_render.py, test_assets.py,
+                           # test_ephemeris.py, _cli_tool.py (dev-only
+                           #   ad-hoc render CLI; not shipped)
 ```

@@ -12,7 +12,7 @@ implanet-fetch                           # bulk-download auto-fetchable maps (~2
 python scripts/fetch_maps.py             # dev shim, identical CLI (impl now lives in implanet/fetch.py)
 python scripts/sync_registry.py          # mirror maps/*.json into implanet/assets/data/ after editing a registry
 python scripts/build_attribution.py      # regenerate ATTRIBUTION.md from the registries
-implanet <texture> <output> [--view x,y,z | --latlon lat,lon,0] [--sun x,y,z]   # CLI wrapper around render_disk
+python tests/_cli_tool.py <texture> <output> [--view x,y,z | --latlon lat,lon,0] [--sun x,y,z]   # dev-only ad-hoc render CLI (not shipped)
 ```
 
 `tests/test_ephemeris.py` auto-skips if `spiceypy` or the SPICE kernels are missing. The first call to `ensure_kernels()` downloads ~32 MB of NAIF kernels (see asset layer below).

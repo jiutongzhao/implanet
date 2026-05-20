@@ -1,4 +1,11 @@
-"""Command-line interface: implanet <texture> <output> [options]."""
+"""Internal dev CLI — NOT part of the public package surface.
+
+Lives under tests/ rather than implanet/ because the user-facing API
+is the Python one (render_disk / render_flatmap / render_info, plus
+the implanet-fetch console script for bulk-downloading maps). This
+script is kept around for ad-hoc rendering during development; run as
+``python tests/_cli_tool.py <texture> <output> [options]``.
+"""
 
 from __future__ import annotations
 
