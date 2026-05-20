@@ -103,18 +103,17 @@ def get_texture(body: str, variant: Optional[str] = None, *,
                 quiet: bool = False) -> Path:
     """Return a local path to the texture for `body` (+ optional variant).
 
-    Downloads it into the maps cache on first use. Raises if the manifest
-    entry is manual-only (no ``asset_url``).
+    Downloads it into the maps cache on first use. Raises with an
+    actionable hint if the manifest entry is manual-only (no
+    ``asset_url``) or if ``download_if_missing=False`` and the file
+    isn't cached yet.
     """
     e = find_texture(body, variant)
     url = e.get("asset_url")
     generator = e.get("generator")
     fname = e.get("filename") or (url.rsplit("/", 1)[-1] if url else None)
     if not fname:
-        raise ValueError(
-            f"Texture {body}/{e.get('variant')} is manual-only "
-            f"(no asset_url). Obtain it from: {e.get('portal_url')}"
-        )
+        raise ValueError(_manual_download_hint(e))
     dest = maps_dir() / fname
     if dest.exists():
         return dest
@@ -124,20 +123,64 @@ def get_texture(body: str, variant: Optional[str] = None, *,
         from implanet.assets._synthetic import build
         return build(generator, dest)
     if not download_if_missing:
-        raise FileNotFoundError(
-            f"Texture {body}/{variant} not cached at {dest} and download "
-            f"disabled."
-        )
+        raise FileNotFoundError(_download_disabled_hint(e, dest))
     if not url:
-        raise ValueError(
-            f"Texture {body}/{e.get('variant')} is manual-only "
-            f"(no asset_url). Obtain it from: {e.get('portal_url')}"
-        )
+        raise ValueError(_manual_download_hint(e))
     path = download(url, dest,
                     expected_size=e.get("size_bytes_estimated"), quiet=quiet)
     if not quiet:
         _print_citation_hint(e)
     return path
+
+
+def _manual_download_hint(entry: dict) -> str:
+    """Multi-line, actionable error for a manual-only texture: tells the
+    user where to download it from, what filename to save it as, and
+    which directory to drop it into so the next ``get_texture()`` call
+    just works."""
+    body = entry.get("body", "?")
+    variant = entry.get("variant") or "(default)"
+    portal = entry.get("portal_url") or "<no portal URL in registry>"
+    fname = (entry.get("filename")
+             or (entry["asset_url"].rsplit("/", 1)[-1]
+                 if entry.get("asset_url") else "<see portal>"))
+    target_dir = maps_dir()
+    note = entry.get("note", "")
+    note_line = f"\n  Note: {note}" if note else ""
+    return (
+        f"Texture {body}/{variant} is manual-only — the registry has "
+        f"no direct download URL, so implanet can't fetch it for you.\n"
+        f"\n"
+        f"To use it:\n"
+        f"  1. Download from: {portal}\n"
+        f"  2. Save it as:    {fname}\n"
+        f"  3. Place it in:   {target_dir}\n"
+        f"\n"
+        f"Then re-run your get_texture({body!r}"
+        + (f", {entry['variant']!r}" if entry.get('variant') else "")
+        + ") call — the file will be picked up from the cache."
+        + note_line
+        + f"\n\nFull license/citation: "
+        f"implanet.show_attribution({body!r})"
+    )
+
+
+def _download_disabled_hint(entry: dict, dest: Path) -> str:
+    """Error for `download_if_missing=False` when the file isn't cached
+    yet — tells the user three ways to get it onto disk."""
+    body = entry.get("body", "?")
+    variant = entry.get("variant") or "(default)"
+    var_arg = (f", {entry['variant']!r}" if entry.get('variant') else "")
+    return (
+        f"Texture {body}/{variant} isn't cached at {dest} and "
+        f"download_if_missing=False was set.\n"
+        f"\n"
+        f"To populate the cache, pick one:\n"
+        f"  • Python: implanet.get_texture({body!r}{var_arg}) "
+        f"   (default download_if_missing=True will fetch it)\n"
+        f"  • CLI:    implanet-fetch --body {body}\n"
+        f"  • Manual: drop the file at {dest} yourself"
+    )
 
 
 def _print_citation_hint(entry: dict) -> None:

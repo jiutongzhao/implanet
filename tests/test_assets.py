@@ -214,3 +214,30 @@ def test_manual_only_texture_raises(monkeypatch, tmp_path):
     # messenger_basemap_fullres is portal-only (no asset_url).
     with pytest.raises((ValueError, KeyError)):
         assets.get_texture("Mercury", "messenger_basemap_fullres")
+
+
+def test_manual_only_error_carries_actionable_hint(monkeypatch, tmp_path):
+    """The manual-only ValueError should give portal URL + target
+    directory + a re-run pointer — not just a one-line apology."""
+    monkeypatch.setenv("IMPLANET_CACHE", str(tmp_path))
+    monkeypatch.delenv("IMPLANET_MAPS", raising=False)
+    with pytest.raises(ValueError) as exc:
+        assets.get_texture("Mercury", "messenger_basemap_fullres")
+    msg = str(exc.value)
+    assert "manual-only" in msg
+    assert "Download from:" in msg
+    assert "Place it in:" in msg
+    assert "show_attribution" in msg
+
+
+def test_download_disabled_error_lists_three_paths(monkeypatch, tmp_path):
+    """download_if_missing=False on an auto-fetchable but uncached map
+    should explain the three ways to populate the cache."""
+    monkeypatch.setenv("IMPLANET_CACHE", str(tmp_path))
+    monkeypatch.delenv("IMPLANET_MAPS", raising=False)
+    with pytest.raises(FileNotFoundError) as exc:
+        assets.get_texture("Mars", download_if_missing=False)
+    msg = str(exc.value)
+    assert "implanet.get_texture('Mars'" in msg
+    assert "implanet-fetch --body Mars" in msg
+    assert "drop the file" in msg
