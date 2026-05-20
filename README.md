@@ -176,6 +176,72 @@ Built by <code>examples/daynight_reference.py</code>.</sub>
 A full index (with regenerate commands) lives at
 [`docs/figures/README.md`](docs/figures/README.md).
 
+### Texture catalog
+
+What you actually get from `get_texture(body)` — one shaded
+orthographic disk per body's default variant, same lighting for all.
+Regenerate with `python examples/texture_gallery.py`.
+
+<p align="center">
+<img src="docs/figures/gallery/texture_gallery.png" alt="texture gallery — every body's default" width="80%">
+</p>
+
+### Per-body variant comparisons
+
+Several bodies have multiple catalogued textures — different missions,
+different processing, day vs. night. Each comparison below renders
+every auto-fetchable variant under identical lighting and a fixed
+camera. Regenerate any of these with
+`python examples/variant_comparison.py` (which writes one PNG per
+multi-variant body to `examples/figures_gallery/`).
+
+<table>
+<tr>
+<td align="center" width="50%">
+<b>Mercury</b> (3 variants)<br>
+<img src="docs/figures/gallery/variants_mercury.png" alt="Mercury variants" width="100%"><br>
+<sub>Default <code>messenger_bdr_mono</code> (B&W BDR basemap),
+plus the pseudo-color <code>messenger_enhanced_color</code> and the
+Solar System Scope re-processing.</sub>
+</td>
+<td align="center" width="50%">
+<b>Venus</b> (2 variants)<br>
+<img src="docs/figures/gallery/variants_venus.png" alt="Venus variants" width="100%"><br>
+<sub>Cloud-top UV (<code>sss_atmosphere</code>, default) vs. the
+Magellan SAR surface mosaic (<code>sss_surface</code>).</sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<b>Earth</b> (6 variants)<br>
+<img src="docs/figures/gallery/variants_earth.png" alt="Earth variants" width="100%"><br>
+<sub>Blue Marble at two resolutions, the Solar System Scope cloud /
+day / night composites, and the vivid Natural Earth III.</sub>
+</td>
+<td align="center" width="50%">
+<b>Moon</b> (4 variants)<br>
+<img src="docs/figures/gallery/variants_moon.png" alt="Moon variants" width="100%"><br>
+<sub>Clementine UVVIS (default), two LROC color composites, and the
+Solar System Scope re-processing.</sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<b>Mars</b> (2 auto-fetchable variants)<br>
+<img src="docs/figures/gallery/variants_mars.png" alt="Mars variants" width="100%"><br>
+<sub>Solar System Scope (default) vs. the Viking MDIM 2.1 1-km mosaic.
+HRSC / Tianwen-1 are manual-only; the 12-GB Viking full-res is
+skipped by the gallery script.</sub>
+</td>
+<td align="center" width="50%">
+<b>Jupiter</b> (2 variants)<br>
+<img src="docs/figures/gallery/variants_jupiter.png" alt="Jupiter variants" width="100%"><br>
+<sub>Cassini ISS PIA07782 (default) vs. the Solar System Scope
+composite.</sub>
+</td>
+</tr>
+</table>
+
 ## Conventions
 
 All vectors live in the **body-fixed IAU frame** of the rendered body:
