@@ -70,6 +70,16 @@ def kernel_entries() -> list:
     return kernel_registry()["kernels"]
 
 
+def texture_license_notes() -> str:
+    """Top-level umbrella note on texture licensing (provider terms)."""
+    return texture_registry().get("license_notes", "")
+
+
+def kernel_license_notes() -> str:
+    """Top-level umbrella note on SPICE-kernel licensing."""
+    return kernel_registry().get("license_notes", "")
+
+
 def find_texture(body: str, variant: Optional[str] = None) -> dict:
     """Return the manifest entry for a body (+ optional variant).
 
