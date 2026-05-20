@@ -97,7 +97,7 @@ def render_disk(
     lon0: float = -np.pi,
     sun_direction: Vec3 | None = None,
     ambient: float = 0.15,
-    background: Sequence[int] = (0, 0, 0),
+    background: Sequence[int] = (255, 255, 255),
 ):
     """Render an equirectangular planet map as viewed from `view_direction`.
 

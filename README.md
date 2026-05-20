@@ -358,7 +358,7 @@ image = render_disk(
     lon0=-math.pi,
     sun_direction=None,            # None → flat albedo (no shading)
     ambient=0.15,                  # [0, 1]; floor on Lambertian shading
-    background=(0, 0, 0),          # RGB 0-255 *or* a matplotlib color
+    background=(255, 255, 255),    # RGB 0-255 *or* a matplotlib color
                                    #   string: "white", "#1f77b4", "0.25"
 )
 # image: uint8 ndarray (H, W) or (H, W, C); row 0 = top.

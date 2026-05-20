@@ -79,7 +79,7 @@ def main(argv=None):
                    help="Sun direction 'x,y,z' (planet -> sun). Omit for flat shading.")
     p.add_argument("--ambient", type=float, default=0.15,
                    help="Ambient light when --sun is used.")
-    p.add_argument("--background", type=_color, default=(0.0, 0.0, 0.0),
+    p.add_argument("--background", type=_color, default=(255.0, 255.0, 255.0),
                    help="Background RGB 0-255 as 'r,g,b'.")
     args = p.parse_args(argv)
 
