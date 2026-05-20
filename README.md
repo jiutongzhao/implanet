@@ -521,9 +521,51 @@ ax.set_title(render_info(get_texture("Earth"), view_direction=view,
 fig.savefig("earth_scientific.png", dpi=140, bbox_inches="tight")
 ```
 
-For a flat 2:1 equirectangular plot use `render_flatmap` instead;
-`flatmap_terminator(sun_direction=…)` gives you the day-night line in
-lon/lat space to overlay with the same `ax.plot(xs, ys)` pattern.
+### Flatmap with day-night terminator
+
+`render_flatmap` returns a shaded equirectangular re-render (lon on x,
+lat on y, both linear) instead of an orthographic disk.
+`flatmap_terminator(sun_direction=…)` is its overlay companion — the
+day-night great circle expressed in **lon/lat** rather than disk
+coordinates, so the same `ax.plot(xs, ys)` pattern works:
+
+```python
+import matplotlib.pyplot as plt
+from implanet import (
+    render_flatmap, flatmap_terminator,
+    sun_direction, get_texture,
+)
+
+utc = "2026-05-14T12:00:00"
+sun = sun_direction("Earth", utc)
+
+# Shade the full equirectangular map for this UTC.
+flat = render_flatmap(get_texture("Earth"), sun_direction=sun,
+                      ambient=0.05, return_array=True)
+
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.imshow(flat, extent=(-180, 180, -90, 90), aspect="auto")
+
+# Overlay the terminator (one or two polyline pieces, depending on the
+# sub-solar latitude — at solstice it's a single sinusoid; at equinox
+# it wraps around the seam).
+for xs, ys in zip(*flatmap_terminator(sun_direction=sun)):
+    ax.plot(xs, ys, "--", color="white", lw=1.4)
+
+ax.set_xlabel("longitude (°)"); ax.set_ylabel("latitude (°)")
+ax.set_title(f"Earth flatmap with day-night terminator  ·  {utc}")
+fig.savefig("earth_flatmap.png", dpi=140, bbox_inches="tight")
+```
+
+Result:
+
+<p align="center">
+<img src="docs/figures/quickstart/earth_flatmap_terminator.png" alt="flatmap + terminator example" width="640">
+</p>
+
+Pass `rotation_lon_deg=θ` to `render_flatmap` to spin the body under a
+fixed sun — handy for stitching rotation-period animations frame by
+frame.
 
 ## Map sources
 
