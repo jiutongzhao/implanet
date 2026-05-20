@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Sequence, Tuple, Union
 
 import numpy as np
@@ -10,12 +12,20 @@ from PIL import Image
 from implanet.projection import camera_basis, orthographic_rays, sphere_to_uv
 
 
-ArrayLike = Union[np.ndarray, "Image.Image"]
+ArrayLike = Union[np.ndarray, "Image.Image", str, "os.PathLike"]
 Vec3 = Sequence[float]
 
 
 def _as_texture_array(texture: ArrayLike) -> np.ndarray:
+    # A path (str / Path) is opened with Pillow, which picks the decoder
+    # from the file's conventional type (.png/.jpg/.tif/...).
+    if isinstance(texture, (str, os.PathLike)):
+        texture = Image.open(texture)
     if isinstance(texture, Image.Image):
+        # Renderer handles 1/3/4-channel arrays; coerce palette, CMYK,
+        # YCbCr, etc. to RGB so samples are real colours, not indices.
+        if texture.mode not in ("L", "RGB", "RGBA"):
+            texture = texture.convert("RGB")
         texture = np.asarray(texture)
     tex = np.asarray(texture)
     if tex.ndim == 2:
@@ -56,7 +66,7 @@ def _sample_bilinear(texture: np.ndarray, u: np.ndarray, v: np.ndarray) -> np.nd
     return top * (1.0 - ty) + bot * ty
 
 
-def render_planet(
+def render_disk(
     texture: ArrayLike,
     view_direction: Vec3 = (1.0, 0.0, 0.0),
     up: Vec3 = (0.0, 0.0, 1.0),
@@ -66,15 +76,28 @@ def render_planet(
     sun_direction: Vec3 | None = None,
     ambient: float = 0.15,
     background: Sequence[int] = (0, 0, 0),
-    return_array: bool = False,
 ):
     """Render an equirectangular planet map as viewed from `view_direction`.
 
+    Returns
+    -------
+    image : ndarray, uint8
+        Rendered disk, shape (H, W) for grayscale or (H, W, C) for color.
+        Row 0 is the top of the image (image-space convention).
+    x : ndarray, float64
+        Pixel-edge x-coordinates in planet radii, length W+1, monotonically
+        increasing from -margin to +margin.
+    y : ndarray, float64
+        Pixel-edge y-coordinates in planet radii, length H+1, monotonically
+        decreasing from +margin to -margin (matches image row order, so
+        y[0] = +margin is the top edge of row 0).
+
     Parameters
     ----------
-    texture : ndarray or PIL.Image
+    texture : str, path, ndarray, or PIL.Image
         Equirectangular map. Width spans longitude over 2*pi, height spans
-        latitude over pi. Row 0 is the north pole.
+        latitude over pi. Row 0 is the north pole. A str/Path is opened
+        with Pillow (decoder chosen from the file's conventional type).
     view_direction : 3-vector
         Direction from the camera toward the planet center, in planet-fixed
         coordinates. Need not be unit length.
@@ -95,35 +118,35 @@ def render_planet(
         Ambient light term in [0, 1] used when `sun_direction` is set.
     background : 3-tuple of uint8
         RGB fill for pixels outside the planet disk.
-    return_array : bool
-        If True, return a NumPy uint8 array instead of a PIL.Image.
 
     Examples
     --------
-    Render the sub-observer hemisphere with no shading (the texture's
-    raw albedo shows everywhere on the disk):
+    Render the sub-observer hemisphere and save with PIL (pass the
+    texture path straight in — no need to open it yourself):
 
         >>> from PIL import Image
-        >>> tex = Image.open("maps/data/earth_bluemarble_5400x2700.jpg")
-        >>> img = render_planet(tex, view_direction=(-1, 0, 0), size=400)
+        >>> img, x, y = render_disk("maps/data/earth_bluemarble_5400x2700.jpg",
+        ...                         view_direction=(-1, 0, 0), size=400)
+        >>> Image.fromarray(img).save("earth.png")
 
-    Add a sun on the +X side to get Lambertian shading. The terminator
-    runs through the camera's line of sight (a half-illuminated disk):
+    Plot with matplotlib pcolormesh (x, y are pixel-edge coordinates in
+    planet radii, so the disk lands at [-1, +1] on both axes):
 
-        >>> img = render_planet(tex,
-        ...                     view_direction=(-1, 0, 0),
-        ...                     sun_direction=(1, 0, 0),
-        ...                     ambient=0.05, size=512)
+        >>> import matplotlib.pyplot as plt
+        >>> img, x, y = render_disk(tex, view_direction=(-1, 0, 0),
+        ...                         sun_direction=(1, 0, 0))
+        >>> fig, ax = plt.subplots()
+        >>> ax.pcolormesh(x, y, img)
+        >>> ax.set_aspect("equal")
 
-    Use SPICE for both vectors and get a NumPy array out:
+    Use SPICE for both vectors:
 
         >>> from implanet import sun_direction
         >>> sun = sun_direction("Mars", "2026-05-14T12:00:00")
-        >>> arr = render_planet(mars_tex,
-        ...                     view_direction=(-1, 0, 0),
-        ...                     sun_direction=sun,
-        ...                     return_array=True)
-        >>> arr.shape, arr.dtype
+        >>> img, x, y = render_disk(mars_tex,
+        ...                         view_direction=(-1, 0, 0),
+        ...                         sun_direction=sun)
+        >>> img.shape, img.dtype
         ((512, 512, 3), dtype('uint8'))
     """
     tex = _as_texture_array(texture)
@@ -164,12 +187,13 @@ def render_planet(
     if out.shape[-1] == 1:
         out = out[..., 0]
 
-    if return_array:
-        return out
-    mode = {1: "L", 2: "LA", 3: "RGB", 4: "RGBA"}.get(
-        out.shape[-1] if out.ndim == 3 else 1, "RGB"
-    )
-    return Image.fromarray(out, mode=mode)
+    h, w = out.shape[:2]
+    radius = 0.5 * min(h, w) / margin
+    cx = (w - 1) / 2.0
+    cy = (h - 1) / 2.0
+    x_edges = (np.arange(w + 1, dtype=np.float64) - 0.5 - cx) / radius
+    y_edges = -(np.arange(h + 1, dtype=np.float64) - 0.5 - cy) / radius
+    return out, x_edges, y_edges
 
 
 def render_flatmap(
@@ -183,7 +207,7 @@ def render_flatmap(
 ):
     """Render the texture as a flat 2:1 equirectangular map.
 
-    Unlike `render_planet`, which produces an orthographic disk view of
+    Unlike `render_disk`, which produces an orthographic disk view of
     the visible hemisphere, this function returns a full surface map in
     plate-carrée projection (longitude on the x-axis, latitude on the
     y-axis, both linear). Two optional transforms are applied per pixel:
@@ -202,8 +226,9 @@ def render_flatmap(
 
     Parameters
     ----------
-    texture : ndarray or PIL.Image
-        Source equirectangular map (2:1).
+    texture : str, path, ndarray, or PIL.Image
+        Source equirectangular map (2:1). A str/Path is opened with
+        Pillow (decoder chosen from the file's conventional type).
     rotation_lon_deg : float
         Display rotation in degrees, in [−360, +360].
     sun_direction : 3-vector or None

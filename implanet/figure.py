@@ -18,7 +18,7 @@ from implanet.overlays import (
     subobserver_point,
     terminator_segments,
 )
-from implanet.render import render_flatmap, render_planet
+from implanet.render import render_flatmap, render_disk
 
 
 Vec3 = Sequence[float]
@@ -92,7 +92,7 @@ def plot_planet(
     """
     import matplotlib.pyplot as plt
 
-    arr = render_planet(
+    arr, _, _ = render_disk(
         texture,
         view_direction=view_direction,
         up=up,
@@ -102,7 +102,6 @@ def plot_planet(
         sun_direction=sun_direction,
         ambient=ambient,
         background=(255, 255, 255),
-        return_array=True,
     )
 
     half = margin
@@ -119,23 +118,21 @@ def plot_planet(
         view_direction=view_direction, up=up,
         lat_step_deg=lat_step_deg, lon_step_deg=lon_step_deg,
     )
-    for seg in g["parallels"]:
-        ax.plot(seg[:, 0], seg[:, 1],
-                linestyle="--", linewidth=graticule_lw,
-                color=graticule_color, alpha=graticule_alpha)
-    for seg in g["meridians"]:
-        ax.plot(seg[:, 0], seg[:, 1],
-                linestyle="--", linewidth=graticule_lw,
-                color=graticule_color, alpha=graticule_alpha)
+    for xs, ys in (g["parallels"], g["meridians"]):
+        for x, y in zip(xs, ys):
+            ax.plot(x, y,
+                    linestyle="--", linewidth=graticule_lw,
+                    color=graticule_color, alpha=graticule_alpha)
 
     if show_limb:
-        c = limb_circle()
-        ax.plot(c[:, 0], c[:, 1], linewidth=1.0, color="black")
+        lx, ly = limb_circle()
+        ax.plot(lx, ly, linewidth=1.0, color="black")
 
     if show_terminator and sun_direction is not None:
-        for seg in terminator_segments(view_direction=view_direction,
-                                       sun_direction=sun_direction, up=up):
-            ax.plot(seg[:, 0], seg[:, 1],
+        txs, tys = terminator_segments(view_direction=view_direction,
+                                       sun_direction=sun_direction, up=up)
+        for x, y in zip(txs, tys):
+            ax.plot(x, y,
                     linewidth=terminator_lw,
                     linestyle=terminator_ls,
                     color=terminator_color,
@@ -264,9 +261,10 @@ def plot_flatmap(
     sub_solar_str = ""
     if sun_direction is not None:
         if show_terminator:
-            for seg in flatmap_terminator(sun_direction,
-                                          rotation_lon_deg=rotation_lon_deg):
-                ax.plot(seg[:, 0], seg[:, 1],
+            txs, tys = flatmap_terminator(sun_direction,
+                                          rotation_lon_deg=rotation_lon_deg)
+            for x, y in zip(txs, tys):
+                ax.plot(x, y,
                         color=terminator_color, lw=terminator_lw,
                         ls=terminator_ls, alpha=terminator_alpha)
         # Sub-solar marker — apply the same display rotation.

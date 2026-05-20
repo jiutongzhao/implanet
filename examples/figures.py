@@ -11,7 +11,12 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from implanet import render_planet
+from implanet import render_disk
+
+
+def render_disk_pil(*args, **kwargs) -> Image.Image:
+    arr, _, _ = render_disk(*args, **kwargs)
+    return Image.fromarray(arr)
 
 
 REPO = Path(__file__).resolve().parent.parent
@@ -77,7 +82,7 @@ def fig_earth_rotation(earth: Image.Image, size: int = 320):
     tiles = []
     for lon in range(0, 360, 60):
         v = view_from_latlon(0, lon)
-        img = render_planet(earth, view_direction=v, sun_direction=sun,
+        img = render_disk_pil(earth, view_direction=v, sun_direction=sun,
                             size=size, ambient=0.08, margin=1.06)
         tiles.append(label(img, f"lon {lon:+d}°"))
     return grid(tiles, cols=3)
@@ -94,7 +99,7 @@ def fig_earth_views(earth: Image.Image, size: int = 380):
     ]
     tiles = []
     for name, v, up in cases:
-        img = render_planet(earth, view_direction=v, up=up,
+        img = render_disk_pil(earth, view_direction=v, up=up,
                             sun_direction=sun, size=size,
                             ambient=0.08, margin=1.06)
         tiles.append(label(img, name))
@@ -107,7 +112,7 @@ def fig_earth_terminator(earth: Image.Image, size: int = 340):
     tiles = []
     for sun_lon in (-90, -30, 30, 90):
         sun = sun_from_latlon(10, sun_lon)
-        img = render_planet(earth, view_direction=v, sun_direction=sun,
+        img = render_disk_pil(earth, view_direction=v, sun_direction=sun,
                             size=size, ambient=0.04, margin=1.06)
         tiles.append(label(img, f"sun lon {sun_lon:+d}°"))
     return grid(tiles, cols=2)
@@ -119,7 +124,7 @@ def fig_moon_phases(moon: Image.Image, size: int = 320):
     tiles = []
     for sun_lon in (-120, -60, 0, 30, 90, 150):
         sun = sun_from_latlon(0, sun_lon)
-        img = render_planet(moon, view_direction=v, sun_direction=sun,
+        img = render_disk_pil(moon, view_direction=v, sun_direction=sun,
                             size=size, ambient=0.02, margin=1.06)
         tiles.append(label(img, f"sun {sun_lon:+d}°"))
     return grid(tiles, cols=3)
@@ -128,9 +133,9 @@ def fig_moon_phases(moon: Image.Image, size: int = 320):
 def fig_earth_and_moon(earth: Image.Image, moon: Image.Image, size: int = 480):
     """Side-by-side pretty render: Earth + Moon at matched lighting."""
     sun = sun_from_latlon(20, -30)
-    e = render_planet(earth, view_direction=view_from_latlon(15, 25),
+    e = render_disk_pil(earth, view_direction=view_from_latlon(15, 25),
                       sun_direction=sun, size=size, ambient=0.08, margin=1.05)
-    m = render_planet(moon, view_direction=view_from_latlon(0, 10),
+    m = render_disk_pil(moon, view_direction=view_from_latlon(0, 10),
                       sun_direction=sun, size=size, ambient=0.03, margin=1.05)
     return grid([label(e, "Earth (NASA Blue Marble)"),
                  label(m, "Moon (NASA SVS / LROC)")], cols=2)
@@ -139,7 +144,7 @@ def fig_earth_and_moon(earth: Image.Image, moon: Image.Image, size: int = 480):
 def fig_hires(earth: Image.Image, size: int = 1024):
     """Single high-resolution render to show off detail."""
     sun = sun_from_latlon(25, -50)
-    img = render_planet(earth, view_direction=view_from_latlon(20, 0),
+    img = render_disk_pil(earth, view_direction=view_from_latlon(20, 0),
                         sun_direction=sun, size=size, ambient=0.06, margin=1.04)
     return label(img, "Earth, 1024 px, 8K source texture")
 

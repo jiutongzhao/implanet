@@ -3,7 +3,7 @@
 Computes the direction from a body to the Sun, expressed in the body's
 IAU rotation frame — the same frame in which our equirectangular textures
 are laid out. Suitable for replacing arbitrary `sun_direction` vectors in
-`implanet.render_planet` with physically correct sub-solar geometry at
+`implanet.render_disk` with physically correct sub-solar geometry at
 a given epoch.
 
 Required kernels (auto-downloaded into `kernels/` on first use):
@@ -19,8 +19,6 @@ below the sub-pixel level for any rendered figure.
 
 from __future__ import annotations
 
-import os
-import urllib.request
 from pathlib import Path
 from typing import Sequence, Tuple, Union
 
@@ -28,17 +26,12 @@ import numpy as np
 
 import spiceypy as spice
 
+from implanet.assets import download, get_kernel, kernels_dir
+from implanet.assets._registry import find_kernel
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-KERNEL_DIR = Path(os.environ.get("IMPLANET_KERNELS",
-                                 str(REPO_ROOT / "kernels")))
-
-# Files we need, in load order. Format: filename -> URL.
-_KERNELS = {
-    "naif0012.tls": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
-    "pck00011.tpc": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc",
-    "de440s.bsp":   "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp",
-}
+# Generic kernels needed for any ephemeris query, in SPICE load order.
+# These are `id`s in maps/kernels.json.
+_GENERIC_KERNEL_IDS = ("naif_lsk", "naif_pck", "de440s")
 
 # Body name -> (IAU body-fixed frame, position origin used for ephemerides).
 # For moons without their own SPK, we use the parent planet's barycenter.
@@ -70,44 +63,48 @@ _BODY_INFO = {
 _loaded = False
 
 
-def _download(url: str, dest: Path) -> None:
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".part")
-    req = urllib.request.Request(url, headers={"User-Agent": "implanet/0.1"})
-    with urllib.request.urlopen(req, timeout=120) as r, open(tmp, "wb") as f:
-        chunk = 1 << 16
-        while True:
-            buf = r.read(chunk)
-            if not buf:
-                break
-            f.write(buf)
-    tmp.replace(dest)
+def _generic_paths(kernel_dir: Union[str, Path, None]) -> list:
+    """Resolve (downloading if needed) the three generic kernels.
+
+    `kernel_dir` keeps backward compatibility: if given, kernels are
+    fetched into exactly that directory. Otherwise the shared
+    implanet.assets cache is used (which honours IMPLANET_KERNELS /
+    IMPLANET_CACHE and the in-repo kernels/ dir).
+    """
+    paths = []
+    for kid in _GENERIC_KERNEL_IDS:
+        entry = find_kernel(kid)
+        if kernel_dir is not None:
+            dest = Path(kernel_dir) / entry["filename"]
+            if not dest.exists():
+                print(f"  downloading SPICE kernel {entry['filename']}")
+            download(entry["url"], dest,
+                     expected_size=entry.get("size_bytes"), quiet=True)
+        else:
+            dest = get_kernel(kid, quiet=True)
+        paths.append(dest)
+    return paths
 
 
 def ensure_kernels(kernel_dir: Union[str, Path, None] = None) -> Path:
-    """Download SPICE kernels if missing; return the kernel directory.
+    """Download the generic SPICE kernels if missing; return their directory.
 
     Examples
     --------
     First call downloads naif0012.tls, pck00011.tpc and de440s.bsp
-    (~32 MB total) into ./kernels/:
+    (~32 MB total) into the cache:
 
-        >>> ensure_kernels()
+        >>> ensure_kernels()                       # doctest: +SKIP
         PosixPath('.../kernels')
 
-    Use a custom location (or set the IMPLANET_KERNELS env var):
+    Use a custom location (or set the IMPLANET_KERNELS / IMPLANET_CACHE
+    env vars):
 
-        >>> ensure_kernels("/data/shared/spice_kernels")
+        >>> ensure_kernels("/data/shared/spice_kernels")   # doctest: +SKIP
         PosixPath('/data/shared/spice_kernels')
     """
-    d = Path(kernel_dir) if kernel_dir is not None else KERNEL_DIR
-    d.mkdir(parents=True, exist_ok=True)
-    for name, url in _KERNELS.items():
-        path = d / name
-        if not path.exists():
-            print(f"  downloading SPICE kernel {name} ({url})")
-            _download(url, path)
-    return d
+    paths = _generic_paths(kernel_dir)
+    return paths[0].parent
 
 
 def load_kernels(kernel_dir: Union[str, Path, None] = None) -> None:
@@ -125,9 +122,8 @@ def load_kernels(kernel_dir: Union[str, Path, None] = None) -> None:
     global _loaded
     if _loaded:
         return
-    d = ensure_kernels(kernel_dir)
-    for name in _KERNELS:
-        spice.furnsh(str(d / name))
+    for path in _generic_paths(kernel_dir):
+        spice.furnsh(str(path))
     _loaded = True
 
 
@@ -168,7 +164,7 @@ def sun_direction(body: str, utc: str,
                   abcorr: str = "LT") -> np.ndarray:
     """Unit vector from `body` toward the Sun, in the body's IAU frame.
 
-    Suitable for passing as `sun_direction=` to `render_planet`.
+    Suitable for passing as `sun_direction=` to `render_disk`.
     `abcorr` is the SPICE aberration correction ("NONE", "LT", "LT+S").
 
     Examples
@@ -179,9 +175,9 @@ def sun_direction(body: str, utc: str,
         >>> v.round(4)
         array([ 0.9471, -0.0137,  0.3206])       # sub-solar ~ (+18°, -1°)
 
-    Plug straight into `render_planet`:
+    Plug straight into `render_disk`:
 
-        >>> img = render_planet(earth_tex,
+        >>> img = render_disk(earth_tex,
         ...                     view_direction=(-1, 0, 0),
         ...                     sun_direction=v,
         ...                     ambient=0.08)
@@ -225,7 +221,7 @@ def view_direction_from_earth(body: str, utc: str,
                               abcorr: str = "LT") -> np.ndarray:
     """Unit vector from `body` toward Earth, in the body's IAU frame.
 
-    Negate to get the view-direction argument expected by `render_planet`
+    Negate to get the view-direction argument expected by `render_disk`
     (which wants camera -> planet-center). Useful for "as seen from Earth"
     renders.
 
@@ -244,7 +240,7 @@ def view_direction_from_earth(body: str, utc: str,
         >>> utc = "2026-01-15T00:00:00"
         >>> earth = view_direction_from_earth("Moon", utc)
         >>> view  = tuple(-x for x in earth)        # camera → center
-        >>> img = render_planet(moon_tex,
+        >>> img = render_disk(moon_tex,
         ...                     view_direction=view,
         ...                     sun_direction=sun_direction("Moon", utc))
     """

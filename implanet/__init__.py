@@ -1,6 +1,6 @@
 """Render a planet's equirectangular map into a 2D view from a given direction."""
 
-from implanet.render import render_planet, render_flatmap
+from implanet.render import render_disk, render_flatmap
 from implanet.projection import camera_basis, orthographic_rays, sphere_to_uv
 from implanet.overlays import (
     flatmap_terminator,
@@ -9,9 +9,10 @@ from implanet.overlays import (
     subobserver_point,
     terminator_segments,
 )
+from implanet.assets import get_texture, list_maps, show_maps
 
 __all__ = [
-    "render_planet",
+    "render_disk",
     "render_flatmap",
     "camera_basis",
     "orthographic_rays",
@@ -21,6 +22,9 @@ __all__ = [
     "subobserver_point",
     "terminator_segments",
     "flatmap_terminator",
+    "get_texture",
+    "list_maps",
+    "show_maps",
 ]
 
 # Ephemeris support requires the optional `spiceypy` dependency. Import

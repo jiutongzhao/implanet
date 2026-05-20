@@ -8,14 +8,15 @@ import pytest
 
 spice = pytest.importorskip("spiceypy")
 from implanet import ephemeris
-
-
-KERNEL_DIR = ephemeris.KERNEL_DIR
+from implanet.assets import get_kernel
 
 
 @pytest.fixture(scope="module", autouse=True)
 def _kernels():
-    if not all((KERNEL_DIR / k).exists() for k in ephemeris._KERNELS):
+    try:
+        for kid in ephemeris._GENERIC_KERNEL_IDS:
+            get_kernel(kid, download_if_missing=False)
+    except FileNotFoundError:
         pytest.skip("SPICE kernels not yet downloaded; run ensure_kernels()")
     ephemeris.load_kernels()
 

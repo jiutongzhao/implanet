@@ -1,12 +1,13 @@
 # --- Generated outputs (regenerate with the scripts under examples/) ---
-examples/figures/
-examples/figures_scientific/
-examples/figures_comparison/
+examples/figures*/
+examples/demo_output/
 examples/animations/
+*.part
 
-# --- Downloaded data (fetch with scripts/fetch_maps.py and ensure_kernels) ---
+# --- Downloaded data (fetch with implanet-fetch and ensure_kernels) ---
 maps/data/
 kernels/
+implanet/_data/
 
 # --- Python ---
 __pycache__/
