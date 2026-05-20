@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Install / common commands
 
 ```bash
-pip install -e .[all,test]              # core + spiceypy + matplotlib + pytest
+pip install -e .[test]                  # core (numpy+Pillow+spiceypy+matplotlib) + pytest
 pytest tests/                            # full suite (~1 s, 33 tests)
 pytest tests/test_render.py::test_camera_basis_orthonormal   # single test
 implanet-fetch                           # bulk-download auto-fetchable maps (~250 MB); --list/--body/--where

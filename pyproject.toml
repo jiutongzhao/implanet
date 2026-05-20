@@ -33,16 +33,23 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Astronomy",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
+# Everything a user needs in ONE install — no extras to pick. spiceypy
+# and matplotlib are still imported lazily/optionally in code, but we
+# ship them by default so `pip install implanet` just works end to end.
 dependencies = [
     "numpy>=1.22",
     "Pillow>=9.0",
+    "spiceypy>=6.0",
+    "matplotlib>=3.5",
 ]
 
 [project.optional-dependencies]
-ephemeris = ["spiceypy>=6.0"]
-figures = ["matplotlib>=3.5"]
-all = ["spiceypy>=6.0", "matplotlib>=3.5"]
+# Dev-only. Back-compat aliases so older `[all]`/`[ephemeris]`/`[figures]`
+# invocations keep working (they're now no-ops — already in core).
 test = ["pytest>=7.0"]
+ephemeris = []
+figures = []
+all = []
 
 [project.urls]
 # Fill in once the GitHub remote exists; left here as placeholders.

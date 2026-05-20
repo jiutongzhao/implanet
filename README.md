@@ -20,12 +20,12 @@ publication-style matplotlib figure layer.
 ## Install
 
 ```bash
-pip install -e .                    # core: numpy + Pillow
-pip install -e .[ephemeris]         # adds spiceypy
-pip install -e .[figures]           # adds matplotlib
-pip install -e .[all]               # both of the above
-pip install -e .[all,test]          # + pytest (for development)
+pip install implanet                # everything — one command, no extras
 ```
+
+That single install pulls in numpy, Pillow, spiceypy *and* matplotlib,
+so rendering, SPICE ephemerides, and the figure layer all work out of
+the box. (Developing the package: `pip install -e .[test]` adds pytest.)
 
 Python ≥ 3.9. Two console scripts are installed:
 
