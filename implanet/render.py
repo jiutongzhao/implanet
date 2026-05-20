@@ -186,6 +186,139 @@ def render_disk(
     return out
 
 
+def render_info(
+    texture: ArrayLike | None = None,
+    view_direction: Vec3 = (1.0, 0.0, 0.0),
+    up: Vec3 = (0.0, 0.0, 1.0),
+    size: Union[int, Tuple[int, int]] = 512,
+    margin: float = 1.05,
+    lon0: float = -np.pi,
+    sun_direction: Vec3 | None = None,
+    ambient: float = 0.15,
+) -> dict:
+    """Describe the texture + camera state behind a `render_disk` call.
+
+    Same signature as `render_disk` (minus `background`); returns a
+    nested dict you can drop into a figure caption / title / footnote.
+
+    The ``texture`` field is populated only when `texture` is a str/Path
+    (or a PIL.Image loaded via `Image.open`) whose filename matches a
+    catalogued entry in ``maps/manifest.json``. For raw ndarray inputs
+    we have no way to know what map it is, so those fields stay None.
+
+    Returns
+    -------
+    dict with keys:
+
+      ``texture`` — {body, variant, mission, instrument, citation,
+                     license, filename, resolution} (or all None)
+      ``camera``  — {view_direction, up, sub_observer_lat_deg,
+                     sub_observer_lon_deg}
+      ``sun``     — {sun_direction, sub_solar_lat_deg,
+                     sub_solar_lon_deg, ambient} (or None if no sun)
+      ``output``  — {size, margin, lon0}
+      ``caption`` — single-line string suitable for figure captions
+
+    Examples
+    --------
+        >>> from implanet import render_disk, render_info, get_texture
+        >>> tex = get_texture("Mars")
+        >>> img = render_disk(tex, view_direction=(-1, 0, 0),
+        ...                   sun_direction=(1, 0, 0.3))
+        >>> info = render_info(tex, view_direction=(-1, 0, 0),
+        ...                    sun_direction=(1, 0, 0.3))
+        >>> info["caption"]                                # doctest: +SKIP
+        'Mars / sss · sub-obs 0°N 0°E · sun (1.00, 0.00, 0.30) · ...'
+    """
+    from implanet.overlays import subobserver_point
+
+    # --- texture lookup ---------------------------------------------------
+    tex_info = dict(body=None, variant=None, mission=None, instrument=None,
+                    citation=None, license=None, filename=None,
+                    resolution=None, portal_url=None)
+    fname = None
+    if isinstance(texture, (str, os.PathLike)):
+        fname = Path(texture).name
+    elif isinstance(texture, Image.Image):
+        fn = getattr(texture, "filename", None)
+        if fn:
+            fname = Path(fn).name
+    if fname:
+        try:
+            from implanet.assets._registry import texture_entries
+            for e in texture_entries():
+                if e.get("filename") == fname:
+                    tex_info.update(
+                        body=e.get("body"),
+                        variant=e.get("variant"),
+                        mission=e.get("mission"),
+                        instrument=e.get("instrument"),
+                        citation=e.get("citation"),
+                        license=e.get("license"),
+                        filename=fname,
+                        resolution=e.get("resolution"),
+                        portal_url=e.get("portal_url"),
+                    )
+                    break
+            else:
+                tex_info["filename"] = fname
+        except Exception:
+            tex_info["filename"] = fname
+
+    # --- camera geometry --------------------------------------------------
+    sub_obs_lat, sub_obs_lon = subobserver_point(view_direction, up)
+    cam_info = dict(
+        view_direction=tuple(float(c) for c in view_direction),
+        up=tuple(float(c) for c in up),
+        sub_observer_lat_deg=float(sub_obs_lat),
+        sub_observer_lon_deg=float(sub_obs_lon),
+    )
+
+    # --- sun geometry -----------------------------------------------------
+    sun_info = None
+    if sun_direction is not None:
+        s = np.asarray(sun_direction, dtype=np.float64)
+        n = np.linalg.norm(s)
+        if n == 0.0:
+            raise ValueError("`sun_direction` must be nonzero.")
+        s_unit = s / n
+        sun_lat = float(np.degrees(np.arcsin(s_unit[2])))
+        sun_lon = float(np.degrees(np.arctan2(s_unit[1], s_unit[0])))
+        sun_info = dict(
+            sun_direction=tuple(float(c) for c in sun_direction),
+            sub_solar_lat_deg=sun_lat,
+            sub_solar_lon_deg=sun_lon,
+            ambient=float(ambient),
+        )
+
+    output = dict(size=size, margin=float(margin), lon0=float(lon0))
+
+    # --- caption ---------------------------------------------------------
+    bits = []
+    if tex_info["body"]:
+        v = tex_info["variant"]
+        bits.append(f"{tex_info['body']}" + (f" / {v}" if v else ""))
+    elif tex_info["filename"]:
+        bits.append(tex_info["filename"])
+    bits.append(_format_latlon("sub-obs", sub_obs_lat, sub_obs_lon))
+    if sun_info is not None:
+        sd = sun_info["sun_direction"]
+        bits.append(f"sun ({sd[0]:.2f}, {sd[1]:.2f}, {sd[2]:.2f})")
+    if tex_info["citation"]:
+        bits.append(tex_info["citation"])
+    caption = " · ".join(bits)
+
+    return dict(texture=tex_info, camera=cam_info, sun=sun_info,
+                output=output, caption=caption)
+
+
+def _format_latlon(label: str, lat: float, lon: float) -> str:
+    """Compact "sub-obs 12°N 34°E" style formatter."""
+    ns = "N" if lat >= 0 else "S"
+    ew = "E" if lon >= 0 else "W"
+    return f"{label} {abs(lat):.0f}°{ns} {abs(lon):.0f}°{ew}"
+
+
 def render_flatmap(
     texture: ArrayLike,
     rotation_lon_deg: float = 0.0,

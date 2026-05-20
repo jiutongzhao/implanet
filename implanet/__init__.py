@@ -1,6 +1,6 @@
 """Render a planet's equirectangular map into a 2D view from a given direction."""
 
-from implanet.render import render_disk, render_flatmap
+from implanet.render import render_disk, render_flatmap, render_info
 from implanet.projection import camera_basis, orthographic_rays, sphere_to_uv
 from implanet.overlays import (
     flatmap_terminator,
@@ -22,6 +22,7 @@ from implanet.assets import (
 __all__ = [
     "render_disk",
     "render_flatmap",
+    "render_info",
     "camera_basis",
     "orthographic_rays",
     "sphere_to_uv",

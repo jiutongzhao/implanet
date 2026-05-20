@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from implanet import (
-    render_disk, render_flatmap,
+    render_disk, render_flatmap, render_info,
     camera_basis, sphere_to_uv,
     terminator_segments, flatmap_terminator,
 )
@@ -202,6 +202,53 @@ def test_render_accepts_image_path(tmp_path):
 
     flat = render_flatmap(str(p), return_array=True)
     assert flat.shape == tex.shape
+
+
+def test_render_info_returns_structured_dict():
+    """render_info echoes inputs and derives sub-observer/sub-solar
+    latitudes — independently of any registry lookup."""
+    info = render_info(
+        np.zeros((100, 200, 3), dtype=np.uint8),
+        view_direction=(-1, 0, 0),
+        sun_direction=(1, 0, 0),
+    )
+    # top-level shape
+    for k in ("texture", "camera", "sun", "output", "caption"):
+        assert k in info
+
+    # raw ndarray has no manifest record → texture fields stay None
+    assert info["texture"]["body"] is None
+    assert info["texture"]["citation"] is None
+
+    # camera: view_direction (-1, 0, 0) → sub-observer at (lat=0, lon=0)
+    assert info["camera"]["view_direction"] == (-1.0, 0.0, 0.0)
+    assert abs(info["camera"]["sub_observer_lat_deg"]) < 1e-9
+    assert abs(info["camera"]["sub_observer_lon_deg"]) < 1e-9
+
+    # sun (1, 0, 0) → sub-solar at (0, 0); 0.3 in z would tilt north
+    assert info["sun"] is not None
+    assert abs(info["sun"]["sub_solar_lat_deg"]) < 1e-9
+    assert "sub-obs" in info["caption"]
+    assert "sun" in info["caption"]
+
+
+def test_render_info_finds_texture_via_manifest():
+    """When passed a registered filename, render_info pulls citation /
+    license / mission from the manifest."""
+    from implanet.assets._registry import texture_entries
+    e = next(x for x in texture_entries() if x["body"] == "Mars")
+    info = render_info(e["filename"], view_direction=(-1, 0, 0))
+    assert info["texture"]["body"] == "Mars"
+    assert info["texture"]["citation"]
+    assert info["texture"]["license"]
+    assert info["caption"].startswith("Mars")
+
+
+def test_render_info_no_sun_omits_sun_block():
+    info = render_info(np.zeros((90, 180, 3), dtype=np.uint8),
+                       view_direction=(-1, 0, 0))
+    assert info["sun"] is None
+    assert "sun" not in info["caption"].lower()
 
 
 def test_render_coerces_palette_image(tmp_path):

@@ -66,6 +66,24 @@ Image.fromarray(img).save("earth.png")
 `get_texture(body, variant=None)` picks the body's default map; pass a
 variant for a specific one, e.g. `get_texture("Earth", "natural_earth3")`.
 
+Need a figure caption with the texture credit and the camera/sun
+geometry? `render_info` mirrors `render_disk`'s signature and returns
+a structured dict plus a one-line caption:
+
+```python
+from implanet import render_info
+info = render_info(get_texture("Mars"),
+                   view_direction=(-1, 0, 0),
+                   sun_direction=(1, 0, 0.3))
+print(info["caption"])
+# Mars / sss · sub-obs 0°N 0°E · sun (1.00, 0.00, 0.30) · Solar System Scope (CC BY 4.0). Underlying data: NASA MGS MOLA team; …
+```
+
+The dict also carries `texture` (body / variant / mission / citation /
+license — only populated when the texture path is in the manifest),
+`camera` (sub-observer lat/lon), `sun` (sub-solar lat/lon, ambient),
+and `output` (size / margin / lon0).
+
 For a publication-style figure (white background, dashed lat/lon grid,
 axis ticks in planet radii):
 
