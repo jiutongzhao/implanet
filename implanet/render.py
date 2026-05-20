@@ -16,6 +16,28 @@ ArrayLike = Union[np.ndarray, "Image.Image", str, "os.PathLike"]
 Vec3 = Sequence[float]
 
 
+def _to_rgb_uint8(color) -> tuple:
+    """Coerce a background color into an ``(r, g, b)`` uint8 tuple.
+
+    Accepts:
+      * an iterable of three numbers in [0, 255] (legacy form), or
+      * any matplotlib-style color spec: a named color (``"white"``,
+        ``"tab:blue"``), a hex string (``"#ff0000"``, ``"#f00"``), or
+        a greyscale level (``"0.25"``).
+
+    Strings are resolved through ``matplotlib.colors.to_rgb`` (imported
+    lazily — render.py's module-level imports stay numpy + Pillow only).
+    """
+    if isinstance(color, str):
+        from matplotlib.colors import to_rgb       # lazy: keeps Layer-2
+                                                   # mpl-free at import
+        r, g, b = to_rgb(color)                    # floats in [0, 1]
+        return (int(round(r * 255)),
+                int(round(g * 255)),
+                int(round(b * 255)))
+    return tuple(color)
+
+
 def _as_texture_array(texture: ArrayLike) -> np.ndarray:
     # A path (str / Path) is opened with Pillow, which picks the decoder
     # from the file's conventional type (.png/.jpg/.tif/...).
@@ -113,8 +135,12 @@ def render_disk(
         planet TOWARD the sun (in planet-fixed coordinates).
     ambient : float
         Ambient light term in [0, 1] used when `sun_direction` is set.
-    background : 3-tuple of uint8
-        RGB fill for pixels outside the planet disk.
+    background : 3-tuple of uint8 *or* color string
+        Fill for pixels outside the planet disk. Either an
+        ``(r, g, b)`` triple in [0, 255] (e.g. ``(0, 0, 0)``) or any
+        matplotlib color string — a named color (``"white"``,
+        ``"tab:orange"``), a hex code (``"#1f77b4"``, ``"#f00"``), or a
+        greyscale level (``"0.25"``).
 
     Examples
     --------
@@ -169,7 +195,7 @@ def render_disk(
         sampled = sampled * shade[..., None]
 
     out = np.empty_like(sampled)
-    bg = np.asarray(background, dtype=np.float64)
+    bg = np.asarray(_to_rgb_uint8(background), dtype=np.float64)
     if sampled.shape[-1] == 1:
         bg = np.array([bg.mean()])
     elif sampled.shape[-1] == 4:

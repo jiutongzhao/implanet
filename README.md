@@ -356,7 +356,8 @@ image = render_disk(
     lon0=-math.pi,
     sun_direction=None,            # None → flat albedo (no shading)
     ambient=0.15,                  # [0, 1]; floor on Lambertian shading
-    background=(0, 0, 0),          # RGB 0-255 for off-disk pixels
+    background=(0, 0, 0),          # RGB 0-255 *or* a matplotlib color
+                                   #   string: "white", "#1f77b4", "0.25"
 )
 # image: uint8 ndarray (H, W) or (H, W, C); row 0 = top.
 # The disk occupies [-1, +1] in planet radii on both axes.
@@ -486,7 +487,7 @@ implanet <texture> <output> [options]
 | `--lon0 DEG` | `-180` | longitude of the texture's left edge |
 | `--sun x,y,z` | none | planet → Sun; omit for flat (no shading) |
 | `--ambient A` | `0.15` | night-side floor when `--sun` is set |
-| `--background r,g,b` | `0,0,0` | off-disk fill (0–255) |
+| `--background r,g,b` *or* color | `0,0,0` | off-disk fill: `0,0,0` style RGB **or** a matplotlib color name/hex (`white`, `#1f77b4`, `0.25`) |
 
 ```bash
 # Mars as seen from sub-point (20°N, 60°E), sun over the prime meridian

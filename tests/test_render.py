@@ -244,6 +244,24 @@ def test_render_info_finds_texture_via_manifest():
     assert info["caption"].startswith("Mars")
 
 
+def test_render_background_accepts_matplotlib_color_string():
+    """background= takes any matplotlib color spec, not just RGB tuples."""
+    tex = np.full((50, 100, 3), 200, dtype=np.uint8)
+    out_named = render_disk(tex, size=64, margin=1.5, background="white")
+    out_hex   = render_disk(tex, size=64, margin=1.5, background="#ffffff")
+    out_grey  = render_disk(tex, size=64, margin=1.5, background="0.25")
+    out_tuple = render_disk(tex, size=64, margin=1.5, background=(255, 255, 255))
+
+    # Corner is outside the disk → it carries the background colour.
+    np.testing.assert_array_equal(out_named[0, 0], [255, 255, 255])
+    np.testing.assert_array_equal(out_hex[0, 0],   [255, 255, 255])
+    np.testing.assert_array_equal(out_named[0, 0], out_tuple[0, 0])
+
+    # "0.25" = 25% grey ≈ 64
+    g = int(out_grey[0, 0, 0])
+    assert 60 <= g <= 68
+
+
 def test_render_info_no_sun_omits_sun_block():
     info = render_info(np.zeros((90, 180, 3), dtype=np.uint8),
                        view_direction=(-1, 0, 0))

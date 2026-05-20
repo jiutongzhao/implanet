@@ -18,6 +18,19 @@ def _vec3(s: str):
     return tuple(parts)
 
 
+def _color(s: str):
+    """Background color parser: '0,0,0' OR any matplotlib color string."""
+    if "," in s:
+        parts = [float(x) for x in s.split(",")]
+        if len(parts) != 3:
+            raise argparse.ArgumentTypeError(
+                "expected three comma-separated 0-255 values or a "
+                "matplotlib color name/hex"
+            )
+        return tuple(parts)
+    return s
+
+
 def _direction_from_lat_lon(lat_deg: float, lon_deg: float):
     lat = math.radians(lat_deg)
     lon = math.radians(lon_deg)
@@ -59,7 +72,7 @@ def main(argv=None):
                    help="Sun direction 'x,y,z' (planet -> sun). Omit for flat shading.")
     p.add_argument("--ambient", type=float, default=0.15,
                    help="Ambient light when --sun is used.")
-    p.add_argument("--background", type=_vec3, default=(0.0, 0.0, 0.0),
+    p.add_argument("--background", type=_color, default=(0.0, 0.0, 0.0),
                    help="Background RGB 0-255 as 'r,g,b'.")
     args = p.parse_args(argv)
 
@@ -80,7 +93,7 @@ def main(argv=None):
         lon0=math.radians(args.lon0),
         sun_direction=args.sun,
         ambient=args.ambient,
-        background=tuple(int(c) for c in args.background),
+        background=args.background,
     )
     Image.fromarray(arr).save(args.output)
     return 0
