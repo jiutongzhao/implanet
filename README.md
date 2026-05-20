@@ -30,8 +30,8 @@ the box. (Developing the package: `pip install -e .[test]` adds pytest.)
 Python ≥ 3.9. Two console scripts are installed:
 
 ```bash
-implanet <texture> <output> [...]   # render one disk to a file
-implanet-fetch [--list|--body ...]  # bulk-download maps
+implanet <texture> <output> [...]            # render one disk to a file
+implanet-fetch [--list|--cite|--body …]      # bulk-download / inspect maps
 ```
 
 **Assets are not bundled** — textures and SPICE kernels download on first
@@ -164,11 +164,58 @@ NumPy — there are no per-pixel Python loops.
 
 ### 1.  Camera basis
 
-From `view_direction` (camera → planet center) and the `up` hint we
-build an orthonormal triplet (`right`, `up`, `forward`) by
-re-orthogonalizing `up` against `forward`. The camera sits at
-−∞·`forward` (orthographic limit). Code: `camera_basis()` in
-`projection.py`.
+`camera_basis(view_direction, up=(0,0,1))` builds an orthonormal
+triplet `(right, up, forward)` in three lines:
+
+```python
+forward = normalize(view_direction)            # camera → planet center
+right   = normalize(cross(forward, up_hint))   # in-image horizontal
+up_axis = cross(right, forward)                # in-image vertical
+```
+
+| axis | direction | fixed by |
+|---|---|---|
+| `forward` | camera optical axis | `view_direction` |
+| `right` | image-plane horizontal (points right on screen) | plane containing `forward` + `up_hint` |
+| `up_axis` | image-plane vertical (points up on screen) | enforced perpendicular to both |
+
+The camera sits at −∞·`forward` (orthographic limit), so what reaches
+the image plane is a parallel projection of the visible hemisphere
+onto the `(right, up_axis)` plane.
+
+**How roll is determined.** A camera has three orientation DOFs: yaw,
+pitch, roll. `view_direction` fixes the first two (the *direction* the
+camera looks). The third — rotation about the optical axis — is the
+*roll*, and it's not an explicit parameter. Instead, the construction
+above does a Gram-Schmidt on the `up` hint against `forward` and uses
+the result as image-up; that's the "look-at" convention used by
+`gluLookAt` and most game/graphics libraries.
+
+With the default `up=(0, 0, 1)` (the body's rotation axis), `up_axis`
+is the projection of the **north pole** onto the image plane, so every
+render is "north-up" by construction. That's the implicit roll choice.
+
+If `up_hint` is parallel to `forward` (looking straight down a pole)
+the cross product collapses and `camera_basis` raises `ValueError` —
+for polar views you must pass a non-vertical `up`, e.g.
+`up=(1, 0, 0)` to send the prime meridian to image-up.
+
+To pick an *explicit* roll θ about the optical axis, pre-rotate `up`
+about `forward` by θ before passing it in (Rodrigues):
+
+```python
+import math, numpy as np
+f = np.asarray(view_direction, float); f /= np.linalg.norm(f)
+k = np.array([0.0, 0.0, 1.0])
+up = (k*math.cos(θ) + np.cross(f, k)*math.sin(θ)
+      + f*np.dot(f, k)*(1 - math.cos(θ)))
+camera_basis(view_direction, up=up)
+```
+
+In practice the default is what almost every scientific figure wants
+— sub-Earth views of planets are conventionally north-up.
+
+Code: `camera_basis()` in `projection.py`.
 
 ### 2.  Pixel → 3D point on the visible hemisphere
 
@@ -239,9 +286,9 @@ channel count.
 
 The work is dominated by the `H × W` bilinear gather, which is a
 constant 4 lookups per pixel. A 720×720 render of an 8K texture takes
-~50 ms on this machine; the full 15-figure scientific batch
-(`examples/scientific_figures.py`) runs in under 25 s including SPICE
-calls.
+~50 ms on this machine; the full ~30-figure scientific batch
+(`examples/scientific_figures.py`) runs in under a minute including
+SPICE calls.
 
 ## API
 
@@ -264,6 +311,37 @@ image = render_disk(
 # → Save: Image.fromarray(image).save(...)
 # → Plot: ax.imshow(image, extent=(-margin, margin, -margin, margin))
 #         ax.set_aspect("equal")
+```
+
+```python
+output = render_flatmap(
+    texture,
+    rotation_lon_deg=0.0,          # rolls the body's spin phase
+    sun_direction=None,            # None → no shading
+    ambient=0.15,
+    lon0=-math.pi,
+    output_size=None,              # (h, w) or None (= matches texture)
+    return_array=False,            # True → ndarray, False → PIL.Image
+)
+# Produces a full 2:1 equirectangular re-render with optional spin +
+# Lambertian shading. Pair with `flatmap_terminator()` to overlay the
+# day-night line in lon/lat space.
+```
+
+```python
+info = render_info(
+    texture, view_direction=(1, 0, 0), up=(0, 0, 1),
+    size=512, margin=1.05, lon0=-math.pi,
+    sun_direction=None, ambient=0.15,
+)
+# Same signature as render_disk (minus background). Returns a dict:
+#   texture → {body, variant, mission, citation, license, …}
+#             (populated when texture is a path or Image.open()'d PIL
+#              image whose filename is catalogued in manifest.json)
+#   camera  → {view_direction, up, sub_observer_lat_deg, …_lon_deg}
+#   sun     → {sun_direction, sub_solar_lat_deg, …, ambient} or None
+#   output  → {size, margin, lon0}
+#   caption → one-line string ready for a figure caption / title
 ```
 
 ### Layer 2 — Geometry primitives
@@ -523,18 +601,20 @@ For the full block of every catalogued texture and SPICE kernel see
 ## Tests
 
 ```bash
-pip install -e .[all,test]
-pytest tests/                       # 38 tests, ~1 s
+pip install -e .[test]
+pytest tests/                       # 44 tests, ~1 s
 ```
 
 `tests/test_render.py` covers basis orthonormality, disk geometry,
-sphere→uv mapping, hemisphere correctness, terminator shading, and
-path/PIL/array texture inputs. `tests/test_assets.py` covers the
-registry/cache layer (resolution order, packaged-registry sync, the
-synthetic texture). `tests/test_ephemeris.py` sanity-checks
-SPICE-derived geometry against physical reality (Mercury obliquity ≈ 0,
-Uranus obliquity dominates, sun near Greenwich at equinox noon UTC) and
-auto-skips if `spiceypy` or the kernels are absent.
+sphere→uv mapping, hemisphere correctness, terminator shading,
+path/PIL/array texture inputs, and the `render_info` metadata helper.
+`tests/test_assets.py` covers the registry/cache layer (resolution
+order, packaged-registry sync, the synthetic texture, the
+`attribution()` API, and an ATTRIBUTION.md drift check).
+`tests/test_ephemeris.py` sanity-checks SPICE-derived geometry against
+physical reality (Mercury obliquity ≈ 0, Uranus obliquity dominates,
+sun near Greenwich at equinox noon UTC) and auto-skips if `spiceypy`
+or the kernels are absent.
 
 ## File layout
 
@@ -542,24 +622,28 @@ auto-skips if `spiceypy` or the kernels are absent.
 implanet/
 ├── __init__.py            # public API + lazy ephemeris import
 ├── projection.py          # camera_basis, orthographic_rays, sphere_to_uv
-├── render.py              # render_disk, render_flatmap
+├── render.py              # render_disk, render_flatmap, render_info
 ├── overlays.py            # graticule/limb/terminator/subobserver
 ├── figure.py              # plot_planet  (matplotlib)
 ├── ephemeris.py           # SPICE wrappers  (spiceypy)
 ├── fetch.py               # `implanet-fetch` console script
 ├── cli.py                 # `implanet` console script
 └── assets/                # registry + lazy download/cache
-    ├── __init__.py        #   get_texture, get_kernel, list_maps, show_maps
+    ├── __init__.py        #   get_texture, get_kernel, list_maps,
+    │                      #   show_maps, attribution, show_attribution
     ├── _registry.py _cache.py _synthetic.py
     └── data/              #   packaged copies of the registry JSON
 
 maps/
 ├── manifest.json          # 41 entries, 23 bodies (textures)
-├── kernels.json           # SPICE kernel registry
+├── kernels.json           # 15 entries (SPICE kernels)
 └── data/                  # texture cache (dev checkout)
 
 kernels/                   # SPICE cache (dev checkout); pip → implanet/_data
-scripts/                   # fetch_maps.py / sync_registry.py (dev shims)
+scripts/                   # fetch_maps.py / sync_registry.py /
+                           # build_attribution.py (dev helpers)
+ATTRIBUTION.md             # human-browseable license/citation index,
+                           # regenerated from manifest.json + kernels.json
 examples/                  # demo.py, scientific_figures.py, flatmap_figures.py,
                            # transparent_disks.py, per-mission flybys, …
 tests/                     # test_render.py, test_assets.py, test_ephemeris.py
