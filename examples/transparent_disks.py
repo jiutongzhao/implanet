@@ -15,7 +15,7 @@ For *every* planet / satellite in the registry (its default texture):
   (``margin=1.0``), disk inscribed and touching all four edges, row 0 at
   the top (``y = +1``). Square.
 
-Sun and the synthetic ``bw`` day/night pattern are skipped (not a
+Sun and the synthetic ``Bw`` day/night pattern are skipped (not a
 planet/satellite). Manual-only textures (e.g. Titan's default) are
 skipped with a note rather than aborting. Big source maps are
 downsampled before rendering so ``render_disk`` never balloons to
@@ -48,7 +48,7 @@ from implanet.assets._registry import texture_entries
 OUT_DIR = Path(__file__).resolve().parent / "figures" / "transparent"
 
 # Not planets/satellites: a star and a synthetic test pattern.
-EXCLUDE = {"Sun", "bw"}
+EXCLUDE = {"Sun", "Bw"}
 
 SIZE = 512          # per-disk; extent is exactly [-1, 1] at any size
 MAX_TEX = 4096      # downsample source maps wider than this (memory)

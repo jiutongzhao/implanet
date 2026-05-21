@@ -58,7 +58,7 @@ def main(size: int = 768) -> Path:
         # and Venus/sss_surface (SAR pixels already encode reflectance —
         # we use sss_atmosphere as default, so this rarely fires).
         ambient = 1.0 if body == "Sun" else 0.05
-        sd = None if body in {"Sun", "bw"} else sun
+        sd = None if body in {"Sun", "Bw"} else sun
 
         img = render_disk(get_texture(body), view_direction=view,
                           sun_direction=sd, ambient=ambient,

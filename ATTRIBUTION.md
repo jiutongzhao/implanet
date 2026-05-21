@@ -530,7 +530,7 @@ attribution requirement is hard to miss.
 - **portal_url**: https://commons.wikimedia.org/wiki/File:Cpmap_cyl_PS717_HR_180.jpg
 - **asset_url**: https://upload.wikimedia.org/wikipedia/commons/f/f8/Cpmap_cyl_PS717_HR_180.jpg
 
-### bw / daynight
+### Bw / daynight
 
 - **agency**: implanet
 - **mission**: synthetic

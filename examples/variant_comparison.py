@@ -72,7 +72,7 @@ def render_body_variants(body: str, variants, size: int = 1024) -> Path:
 
     for ax, entry in zip(axes, variants):
         ambient = 1.0 if body == "Sun" else 0.05
-        sd = None if body in {"Sun", "bw"} else sun
+        sd = None if body in {"Sun", "Bw"} else sun
         try:
             img = render_disk(get_texture(body, entry["variant"]),
                               view_direction=view, sun_direction=sd,
