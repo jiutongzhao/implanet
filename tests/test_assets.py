@@ -241,3 +241,42 @@ def test_download_disabled_error_lists_three_paths(monkeypatch, tmp_path):
     assert "implanet.get_texture('Mars'" in msg
     assert "implanet-fetch --body Mars" in msg
     assert "drop the file" in msg
+
+
+def test_download_maps_filters_and_skips(monkeypatch, tmp_path):
+    """download_maps() honors filters, skips manual-only + oversize, and
+    returns local paths — without hitting the network (we monkeypatch
+    get_texture to record calls and synthesize a path)."""
+    from implanet import download_maps
+    from implanet import fetch as fetch_mod
+
+    calls = []
+
+    def fake_get_texture(body, variant=None, **kw):
+        calls.append((body, variant))
+        return tmp_path / f"{body}_{variant}.bin"
+
+    monkeypatch.setattr("implanet.assets.get_texture", fake_get_texture)
+
+    paths = download_maps(body="Mars", quiet=True)
+    # Only auto-fetchable Mars variants under the size cap are requested;
+    # the 12-GB viking_mdim21_fullres and manual-only HRSC/Tianwen-1 are
+    # excluded.
+    fetched = {v for _, v in calls}
+    assert "sss" in fetched
+    assert "viking_mdim21_1km" in fetched
+    assert "viking_mdim21_fullres" not in fetched      # > 200 MB
+    assert "mars_express_hrsc" not in fetched          # manual-only
+    assert all(isinstance(p, Path) for p in paths)
+    assert len(paths) == len(calls)
+
+
+def test_download_maps_include_large(monkeypatch, tmp_path):
+    from implanet import download_maps
+
+    calls = []
+    monkeypatch.setattr("implanet.assets.get_texture",
+                        lambda body, variant=None, **kw: calls.append(variant)
+                        or (tmp_path / "x.bin"))
+    download_maps(body="Mars", include_large=True, quiet=True)
+    assert "viking_mdim21_fullres" in calls            # now allowed

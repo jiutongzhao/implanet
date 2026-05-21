@@ -667,7 +667,7 @@ path = get_texture("Mars")                       # default variant
 path = get_texture("Earth", "natural_earth3")    # specific, vivid variant
 ```
 
-**Bulk-download** the auto-fetchable subset:
+**Bulk-download** the auto-fetchable subset — from the shell:
 
 ```bash
 implanet-fetch                       # ~250 MB total
@@ -675,6 +675,23 @@ implanet-fetch --body Mars           # filter by body
 implanet-fetch --agency NASA         # filter by agency
 implanet-fetch --include-large       # also the multi-GB USGS mosaics
 ```
+
+…or the same thing from Python, which returns the local paths:
+
+```python
+from implanet import download_maps
+
+download_maps()                          # everything auto-fetchable
+download_maps(body="Mars")               # one body's variants
+download_maps(agency="NASA")             # filter by agency
+paths = download_maps(include_large=True)  # → list[Path]; allow the multi-GB mosaics
+download_maps(body="Moon", quiet=True)   # silence progress + cite hints
+```
+
+`download_maps` reuses `get_texture` under the hood, so manual-only
+entries are skipped and files over ~200 MB are skipped unless
+`include_large=True`. Use `get_texture(body, variant)` when you just
+want one map back as a `Path`.
 
 Status column meaning: `cached` (on disk) · `download` (auto-fetchable)
 · `generate` (synthetic, built locally) · `manual` (portal-only — e.g.

@@ -41,6 +41,57 @@ def _filter(entries, body=None, variant=None, agency=None):
     return out
 
 
+def download_maps(body=None, variant=None, agency=None, *,
+                  include_large=False, quiet=False):
+    """Bulk-download maps from Python — the importable counterpart to the
+    ``implanet-fetch`` CLI.
+
+    Downloads every auto-fetchable (and synthetic) texture matching the
+    filters into the maps cache and returns a ``list[Path]`` of the local
+    files (already-cached ones included). Manual-only entries are skipped,
+    as are files larger than ~200 MB unless ``include_large=True``.
+
+    Parameters
+    ----------
+    body, variant, agency : str, optional
+        Case-insensitive filters; omit for "everything".
+    include_large : bool
+        Allow files above the 200 MB threshold (e.g. the multi-GB USGS
+        full-res mosaics).
+    quiet : bool
+        Suppress per-file download progress + the license/cite hint.
+
+    Examples
+    --------
+        >>> from implanet import download_maps
+        >>> download_maps(body="Mars")             # every Mars variant
+        >>> paths = download_maps(agency="NASA")   # → list[Path]
+        >>> download_maps()                        # the whole catalogue
+    """
+    from implanet.assets import get_texture       # local: reuse all the
+                                                  # download/generator logic
+    entries = _filter(texture_entries(), body=body, variant=variant,
+                      agency=agency)
+    out = []
+    for e in entries:
+        if not (e.get("asset_url") or e.get("generator")):
+            continue                              # manual-only → skip
+        sz = e.get("size_bytes_estimated")
+        if not include_large and sz and sz > LARGE_THRESHOLD:
+            if not quiet:
+                print(f"  skip {e['body']}/{e.get('variant')}: "
+                      f"{_human(sz)} (> {_human(LARGE_THRESHOLD)}; "
+                      f"pass include_large=True)", file=sys.stderr)
+            continue
+        try:
+            out.append(get_texture(e["body"], e.get("variant"), quiet=quiet))
+        except Exception as exc:                  # network / decode / etc.
+            if not quiet:
+                print(f"  FAILED {e['body']}/{e.get('variant')}: {exc}",
+                      file=sys.stderr)
+    return out
+
+
 def cmd_list(entries):
     print(f"{'BODY':<10} {'VARIANT':<26} {'AGENCY':<10} {'SIZE':<10} STATUS")
     print("-" * 90)

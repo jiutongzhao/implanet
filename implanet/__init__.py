@@ -18,6 +18,7 @@ from implanet.assets import (
     show_maps,
     texture_license_notes,
 )
+from implanet.fetch import download_maps
 
 __all__ = [
     "render_disk",
@@ -32,6 +33,7 @@ __all__ = [
     "terminator_segments",
     "flatmap_terminator",
     "get_texture",
+    "download_maps",
     "list_maps",
     "show_maps",
     "attribution",
