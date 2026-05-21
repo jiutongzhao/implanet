@@ -52,10 +52,9 @@ figures = []
 all = []
 
 [project.urls]
-# Fill in once the GitHub remote exists; left here as placeholders.
-# Homepage = "https://github.com/<user>/implanet"
-# Source   = "https://github.com/<user>/implanet"
-# Issues   = "https://github.com/<user>/implanet/issues"
+Homepage = "https://github.com/jiutongzhao/implanet"
+Source   = "https://github.com/jiutongzhao/implanet"
+Issues   = "https://github.com/jiutongzhao/implanet/issues"
 
 [project.scripts]
 implanet-fetch = "implanet.fetch:main"
