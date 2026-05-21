@@ -15,6 +15,7 @@ re-run this script for the print-quality versions.
 """
 from __future__ import annotations
 
+import math
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -58,9 +59,11 @@ def _auto_variants_by_body():
 
 def render_body_variants(body: str, variants, size: int = 1024) -> Path:
     n = len(variants)
-    cols = min(n, 4)
+    # Squarer grids: a single row for ≤3 variants, else as close to
+    # square as possible (6 → 3×2, 4 → 2×2).
+    cols = n if n <= 3 else math.ceil(math.sqrt(n))
     rows = (n + cols - 1) // cols
-    fig, axes = plt.subplots(rows, cols, figsize=(cols * 3.0, rows * 3.2),
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 3.2, rows * 3.7),
                              squeeze=False)
     axes = axes.ravel()
 
@@ -84,15 +87,19 @@ def render_body_variants(body: str, variants, size: int = 1024) -> Path:
                     transform=ax.transAxes, fontsize=10, color="0.6")
         ax.set_aspect("equal")
         ax.set_xticks([]); ax.set_yticks([])
-        ax.set_title(entry["variant"], fontsize=9)
+        # Show exactly how to fetch this variant.
+        ax.set_title(f'get_texture("{body}", "{entry["variant"]}")',
+                     fontsize=8, family="monospace")
 
     for ax in axes[n:]:
         ax.set_visible(False)
 
     fig.suptitle(f"{body} — {n} catalogued variants  ·  "
                  f"identical view (-1,0,0) and sun (1, 0.5, 0.3)",
-                 fontsize=11)
-    fig.tight_layout()
+                 fontsize=12)
+    # Extra row spacing so a panel's title never collides with the disk
+    # in the row above; leave headroom for the suptitle.
+    fig.tight_layout(h_pad=3.0, rect=(0, 0, 1, 0.96))
     dest = OUT / f"variants_{body.lower()}.png"
     fig.savefig(dest, dpi=300, bbox_inches="tight")
     print(f"wrote {dest}  ({body}, {n} variants)")
