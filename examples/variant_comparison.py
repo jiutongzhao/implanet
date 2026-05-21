@@ -8,6 +8,10 @@ identical lighting so the differences are easy to see.
     python examples/variant_comparison.py
 
 Writes one PNG per multi-variant body to ``examples/figures_gallery/``.
+
+Renders at full resolution (size=1024, dpi=300). The committed previews
+under ``docs/figures/gallery/`` are downsampled to keep the repo light;
+re-run this script for the print-quality versions.
 """
 from __future__ import annotations
 
