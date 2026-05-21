@@ -36,6 +36,10 @@ OUT_DIR = Path(__file__).resolve().parent.parent / "docs" / "disk_views"
 EXCLUDE = {"Sun", "Bw"}          # a star and a synthetic test pattern
 SUN = (1.0, 0.0, 0.0)            # sub-solar at lon 0, equator
 AMBIENT = 0.08
+# The antisun view sees only the night hemisphere (cos i = 0 everywhere),
+# so the whole disk renders at the ambient floor — bump it up there so the
+# surface stays readable instead of going near-black.
+AMBIENT_BY_VIEW = {"antisun": 0.30}
 SIZE = 512
 MAX_TEX = 4096                   # downsample huge source maps (memory)
 
@@ -91,7 +95,8 @@ def main(argv=None) -> int:
         for vname, (vdir, vup) in VIEWS.items():
             img = render_disk(
                 tex, view_direction=vdir, up=vup, sun_direction=SUN,
-                ambient=AMBIENT, size=args.size, margin=1.0,
+                ambient=AMBIENT_BY_VIEW.get(vname, AMBIENT),
+                size=args.size, margin=1.0,
                 background=(0, 0, 0),                 # transparent pixels = black
             )
             assert img.shape[-1] == 4                 # RGBA, off-disk alpha=0
@@ -115,7 +120,9 @@ def _write_readme(done: list[str], skipped: list[str]) -> None:
         "(`alpha = 0`); the image spans exactly `x, y in [-1, 1]` "
         "(disk inscribed, row 0 = `y = +1`). Grab any file directly.\n\n"
         "Sun fixed at +X (sub-solar at lon 0, equator); Lambertian-shaded, "
-        f"ambient {AMBIENT}.\n\n"
+        f"ambient {AMBIENT} (the `antisun` view uses "
+        f"{AMBIENT_BY_VIEW['antisun']} so the night hemisphere stays "
+        "readable).\n\n"
         "| view | camera | shows |\n"
         "|---|---|---|\n"
         "| `sun` | Sun→body line | fully-lit dayside |\n"
