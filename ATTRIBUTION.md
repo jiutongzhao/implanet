@@ -57,6 +57,18 @@ attribution requirement is hard to miss.
 - **asset_url**: https://upload.wikimedia.org/wikipedia/commons/a/a4/Solarsystemscope_texture_8k_sun.jpg
 - **note**: The Sun has no meaningful sub-solar geometry; render with ambient=1.0.
 
+### Mercury / messenger_bdr_mono
+
+- **agency**: NASA
+- **mission**: MESSENGER
+- **instrument**: MDIS (WAC/NAC 750 nm)
+- **description**: MESSENGER MDIS Best Direct Resolution (BDR) global monochrome basemap at 166 m/pixel (32 pixels per degree). Single-band reflectance from WAC 750 nm and NAC monochrome frames; the standard B&W albedo product.
+- **provenance**: Wikimedia Commons (USGS Astrogeology)
+- **license**: Public Domain (NASA/JHU-APL/USGS)
+- **citation**: USGS Astrogeology; MESSENGER MDIS team, NASA/JHU-APL. BDR (Best Direct Resolution) global monochrome basemap at 166 m/pixel, MDIS WAC/NAC 750 nm imaging.
+- **portal_url**: https://astrogeology.usgs.gov/search/map/Mercury/Messenger/Global/Mercury_MESSENGER_MDIS_Basemap_BDR_Mosaic_Global_166m
+- **asset_url**: https://upload.wikimedia.org/wikipedia/commons/c/c8/Mercury_MESSENGER_MDIS_Basemap_BDR_Mosaic_Global_32ppd.jpg
+
 ### Mercury / messenger_enhanced_color
 
 - **agency**: NASA
@@ -518,7 +530,7 @@ attribution requirement is hard to miss.
 - **portal_url**: https://commons.wikimedia.org/wiki/File:Cpmap_cyl_PS717_HR_180.jpg
 - **asset_url**: https://upload.wikimedia.org/wikipedia/commons/f/f8/Cpmap_cyl_PS717_HR_180.jpg
 
-### Reference / daynight
+### bw / daynight
 
 - **agency**: implanet
 - **mission**: synthetic

@@ -33,7 +33,7 @@ def _view_from_lon(lon_deg: float):
 
 def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    tex = Image.open(get_texture("Reference", "daynight")).convert("RGB")
+    tex = Image.open(get_texture("bw", "daynight")).convert("RGB")
 
     fig = plt.figure(figsize=(11, 6.6))
     gs = fig.add_gridspec(2, 3, height_ratios=[1.0, 1.15])
@@ -49,12 +49,13 @@ def main():
                   "(lon ±180); 30° graticule")
 
     # Bottom row: three orthographic views.
+    margin = 1.05
     for col, lon in enumerate((0, 90, 180)):
         ax = fig.add_subplot(gs[1, col])
-        img, x, y = render_disk(tex, view_direction=_view_from_lon(lon),
-                                size=420,                  # flat: no sun
-                                background=(255, 255, 255))  # white off-disk
-        ax.imshow(img, extent=(x.min(), x.max(), y.min(), y.max()),
+        img = render_disk(tex, view_direction=_view_from_lon(lon),
+                          size=420, margin=margin,    # flat: no sun
+                          background=(255, 255, 255))  # white off-disk
+        ax.imshow(img, extent=(-margin, margin, -margin, margin),
                   origin="upper")
         ax.set_aspect("equal")
         ax.set_xticks([-1, 0, 1])

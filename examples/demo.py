@@ -56,19 +56,19 @@ def main():
         Image.fromarray(arr).save(path)
 
     # 1. Looking at lon=0, lat=0 from +X; camera -> center direction is -X.
-    arr, _, _ = render_disk(tex, view_direction=(-1, 0, 0), size=512)
+    arr = render_disk(tex, view_direction=(-1, 0, 0), size=512)
     save(arr, "demo_front.png")
 
     # 2. Side view (90 deg around).
-    arr, _, _ = render_disk(tex, view_direction=(0, -1, 0), size=512)
+    arr = render_disk(tex, view_direction=(0, -1, 0), size=512)
     save(arr, "demo_side.png")
 
     # 3. Looking down at the north pole.
-    arr, _, _ = render_disk(tex, view_direction=(0, 0, -1), up=(1, 0, 0), size=512)
+    arr = render_disk(tex, view_direction=(0, 0, -1), up=(1, 0, 0), size=512)
     save(arr, "demo_pole.png")
 
     # 4. Lit by the sun at (1, 1, 0.3).
-    arr, _, _ = render_disk(
+    arr = render_disk(
         tex,
         view_direction=(-1, -0.2, -0.3),
         sun_direction=(1, 1, 0.3),

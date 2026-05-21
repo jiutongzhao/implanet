@@ -58,7 +58,6 @@ all = []
 # Issues   = "https://github.com/<user>/implanet/issues"
 
 [project.scripts]
-implanet = "implanet.cli:main"
 implanet-fetch = "implanet.fetch:main"
 
 [tool.setuptools.packages.find]

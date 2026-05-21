@@ -16,6 +16,28 @@ ArrayLike = Union[np.ndarray, "Image.Image", str, "os.PathLike"]
 Vec3 = Sequence[float]
 
 
+def _to_rgb_uint8(color) -> tuple:
+    """Coerce a background color into an ``(r, g, b)`` uint8 tuple.
+
+    Accepts:
+      * an iterable of three numbers in [0, 255] (legacy form), or
+      * any matplotlib-style color spec: a named color (``"white"``,
+        ``"tab:blue"``), a hex string (``"#ff0000"``, ``"#f00"``), or
+        a greyscale level (``"0.25"``).
+
+    Strings are resolved through ``matplotlib.colors.to_rgb`` (imported
+    lazily — render.py's module-level imports stay numpy + Pillow only).
+    """
+    if isinstance(color, str):
+        from matplotlib.colors import to_rgb       # lazy: keeps Layer-2
+                                                   # mpl-free at import
+        r, g, b = to_rgb(color)                    # floats in [0, 1]
+        return (int(round(r * 255)),
+                int(round(g * 255)),
+                int(round(b * 255)))
+    return tuple(color)
+
+
 def _as_texture_array(texture: ArrayLike) -> np.ndarray:
     # A path (str / Path) is opened with Pillow, which picks the decoder
     # from the file's conventional type (.png/.jpg/.tif/...).
@@ -75,7 +97,7 @@ def render_disk(
     lon0: float = -np.pi,
     sun_direction: Vec3 | None = None,
     ambient: float = 0.15,
-    background: Sequence[int] = (0, 0, 0),
+    background: Sequence[int] = (255, 255, 255),
 ):
     """Render an equirectangular planet map as viewed from `view_direction`.
 
@@ -83,14 +105,11 @@ def render_disk(
     -------
     image : ndarray, uint8
         Rendered disk, shape (H, W) for grayscale or (H, W, C) for color.
-        Row 0 is the top of the image (image-space convention).
-    x : ndarray, float64
-        Pixel-edge x-coordinates in planet radii, length W+1, monotonically
-        increasing from -margin to +margin.
-    y : ndarray, float64
-        Pixel-edge y-coordinates in planet radii, length H+1, monotonically
-        decreasing from +margin to -margin (matches image row order, so
-        y[0] = +margin is the top edge of row 0).
+        Row 0 is the top of the image (image-space convention). The disk
+        occupies ``[-1, +1]`` planet radii on both axes; off-disk pixels
+        are filled with `background` (or transparent for RGBA textures).
+        To plot with `matplotlib.imshow`, use
+        ``extent=(-margin, +margin, -margin, +margin)``.
 
     Parameters
     ----------
@@ -116,8 +135,12 @@ def render_disk(
         planet TOWARD the sun (in planet-fixed coordinates).
     ambient : float
         Ambient light term in [0, 1] used when `sun_direction` is set.
-    background : 3-tuple of uint8
-        RGB fill for pixels outside the planet disk.
+    background : 3-tuple of uint8 *or* color string
+        Fill for pixels outside the planet disk. Either an
+        ``(r, g, b)`` triple in [0, 255] (e.g. ``(0, 0, 0)``) or any
+        matplotlib color string — a named color (``"white"``,
+        ``"tab:orange"``), a hex code (``"#1f77b4"``, ``"#f00"``), or a
+        greyscale level (``"0.25"``).
 
     Examples
     --------
@@ -125,27 +148,27 @@ def render_disk(
     texture path straight in — no need to open it yourself):
 
         >>> from PIL import Image
-        >>> img, x, y = render_disk("maps/data/earth_bluemarble_5400x2700.jpg",
-        ...                         view_direction=(-1, 0, 0), size=400)
+        >>> img = render_disk("maps/data/earth_bluemarble_5400x2700.jpg",
+        ...                   view_direction=(-1, 0, 0), size=400)
         >>> Image.fromarray(img).save("earth.png")
 
-    Plot with matplotlib pcolormesh (x, y are pixel-edge coordinates in
-    planet radii, so the disk lands at [-1, +1] on both axes):
+    Plot with matplotlib `imshow` — the disk lands at [-1, +1] on both
+    axes, with a small `margin` cushion around it:
 
         >>> import matplotlib.pyplot as plt
-        >>> img, x, y = render_disk(tex, view_direction=(-1, 0, 0),
-        ...                         sun_direction=(1, 0, 0))
+        >>> img = render_disk(tex, view_direction=(-1, 0, 0),
+        ...                   sun_direction=(1, 0, 0), margin=1.05)
         >>> fig, ax = plt.subplots()
-        >>> ax.pcolormesh(x, y, img)
+        >>> ax.imshow(img, extent=(-1.05, 1.05, -1.05, 1.05))
         >>> ax.set_aspect("equal")
 
     Use SPICE for both vectors:
 
         >>> from implanet import sun_direction
         >>> sun = sun_direction("Mars", "2026-05-14T12:00:00")
-        >>> img, x, y = render_disk(mars_tex,
-        ...                         view_direction=(-1, 0, 0),
-        ...                         sun_direction=sun)
+        >>> img = render_disk(mars_tex,
+        ...                   view_direction=(-1, 0, 0),
+        ...                   sun_direction=sun)
         >>> img.shape, img.dtype
         ((512, 512, 3), dtype('uint8'))
     """
@@ -172,7 +195,7 @@ def render_disk(
         sampled = sampled * shade[..., None]
 
     out = np.empty_like(sampled)
-    bg = np.asarray(background, dtype=np.float64)
+    bg = np.asarray(_to_rgb_uint8(background), dtype=np.float64)
     if sampled.shape[-1] == 1:
         bg = np.array([bg.mean()])
     elif sampled.shape[-1] == 4:
@@ -186,14 +209,140 @@ def render_disk(
 
     if out.shape[-1] == 1:
         out = out[..., 0]
+    return out
 
-    h, w = out.shape[:2]
-    radius = 0.5 * min(h, w) / margin
-    cx = (w - 1) / 2.0
-    cy = (h - 1) / 2.0
-    x_edges = (np.arange(w + 1, dtype=np.float64) - 0.5 - cx) / radius
-    y_edges = -(np.arange(h + 1, dtype=np.float64) - 0.5 - cy) / radius
-    return out, x_edges, y_edges
+
+def render_info(
+    texture: ArrayLike | None = None,
+    view_direction: Vec3 = (1.0, 0.0, 0.0),
+    up: Vec3 = (0.0, 0.0, 1.0),
+    size: Union[int, Tuple[int, int]] = 512,
+    margin: float = 1.05,
+    lon0: float = -np.pi,
+    sun_direction: Vec3 | None = None,
+    ambient: float = 0.15,
+) -> dict:
+    """Describe the texture + camera state behind a `render_disk` call.
+
+    Same signature as `render_disk` (minus `background`); returns a
+    nested dict you can drop into a figure caption / title / footnote.
+
+    The ``texture`` field is populated only when `texture` is a str/Path
+    (or a PIL.Image loaded via `Image.open`) whose filename matches a
+    catalogued entry in ``maps/manifest.json``. For raw ndarray inputs
+    we have no way to know what map it is, so those fields stay None.
+
+    Returns
+    -------
+    dict with keys:
+
+      ``texture`` — {body, variant, mission, instrument, citation,
+                     license, filename, resolution} (or all None)
+      ``camera``  — {view_direction, up, sub_observer_lat_deg,
+                     sub_observer_lon_deg}
+      ``sun``     — {sun_direction, sub_solar_lat_deg,
+                     sub_solar_lon_deg, ambient} (or None if no sun)
+      ``output``  — {size, margin, lon0}
+      ``caption`` — single-line string suitable for figure captions
+
+    Examples
+    --------
+        >>> from implanet import render_disk, render_info, get_texture
+        >>> tex = get_texture("Mars")
+        >>> img = render_disk(tex, view_direction=(-1, 0, 0),
+        ...                   sun_direction=(1, 0, 0.3))
+        >>> info = render_info(tex, view_direction=(-1, 0, 0),
+        ...                    sun_direction=(1, 0, 0.3))
+        >>> info["caption"]                                # doctest: +SKIP
+        'Mars / sss · sub-obs 0°N 0°E · sun (1.00, 0.00, 0.30) · ...'
+    """
+    from implanet.overlays import subobserver_point
+
+    # --- texture lookup ---------------------------------------------------
+    tex_info = dict(body=None, variant=None, mission=None, instrument=None,
+                    citation=None, license=None, filename=None,
+                    resolution=None, portal_url=None)
+    fname = None
+    if isinstance(texture, (str, os.PathLike)):
+        fname = Path(texture).name
+    elif isinstance(texture, Image.Image):
+        fn = getattr(texture, "filename", None)
+        if fn:
+            fname = Path(fn).name
+    if fname:
+        try:
+            from implanet.assets._registry import texture_entries
+            for e in texture_entries():
+                if e.get("filename") == fname:
+                    tex_info.update(
+                        body=e.get("body"),
+                        variant=e.get("variant"),
+                        mission=e.get("mission"),
+                        instrument=e.get("instrument"),
+                        citation=e.get("citation"),
+                        license=e.get("license"),
+                        filename=fname,
+                        resolution=e.get("resolution"),
+                        portal_url=e.get("portal_url"),
+                    )
+                    break
+            else:
+                tex_info["filename"] = fname
+        except Exception:
+            tex_info["filename"] = fname
+
+    # --- camera geometry --------------------------------------------------
+    sub_obs_lat, sub_obs_lon = subobserver_point(view_direction, up)
+    cam_info = dict(
+        view_direction=tuple(float(c) for c in view_direction),
+        up=tuple(float(c) for c in up),
+        sub_observer_lat_deg=float(sub_obs_lat),
+        sub_observer_lon_deg=float(sub_obs_lon),
+    )
+
+    # --- sun geometry -----------------------------------------------------
+    sun_info = None
+    if sun_direction is not None:
+        s = np.asarray(sun_direction, dtype=np.float64)
+        n = np.linalg.norm(s)
+        if n == 0.0:
+            raise ValueError("`sun_direction` must be nonzero.")
+        s_unit = s / n
+        sun_lat = float(np.degrees(np.arcsin(s_unit[2])))
+        sun_lon = float(np.degrees(np.arctan2(s_unit[1], s_unit[0])))
+        sun_info = dict(
+            sun_direction=tuple(float(c) for c in sun_direction),
+            sub_solar_lat_deg=sun_lat,
+            sub_solar_lon_deg=sun_lon,
+            ambient=float(ambient),
+        )
+
+    output = dict(size=size, margin=float(margin), lon0=float(lon0))
+
+    # --- caption ---------------------------------------------------------
+    bits = []
+    if tex_info["body"]:
+        v = tex_info["variant"]
+        bits.append(f"{tex_info['body']}" + (f" / {v}" if v else ""))
+    elif tex_info["filename"]:
+        bits.append(tex_info["filename"])
+    bits.append(_format_latlon("sub-obs", sub_obs_lat, sub_obs_lon))
+    if sun_info is not None:
+        sd = sun_info["sun_direction"]
+        bits.append(f"sun ({sd[0]:.2f}, {sd[1]:.2f}, {sd[2]:.2f})")
+    if tex_info["citation"]:
+        bits.append(tex_info["citation"])
+    caption = " · ".join(bits)
+
+    return dict(texture=tex_info, camera=cam_info, sun=sun_info,
+                output=output, caption=caption)
+
+
+def _format_latlon(label: str, lat: float, lon: float) -> str:
+    """Compact "sub-obs 12°N 34°E" style formatter."""
+    ns = "N" if lat >= 0 else "S"
+    ew = "E" if lon >= 0 else "W"
+    return f"{label} {abs(lat):.0f}°{ns} {abs(lon):.0f}°{ew}"
 
 
 def render_flatmap(

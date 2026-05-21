@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 
 from implanet import (
-    render_disk, render_flatmap,
+    render_disk, render_flatmap, render_info,
     camera_basis, sphere_to_uv,
-    terminator_segments, flatmap_terminator,
+    disk_terminator, flatmap_terminator,
 )
 from implanet.projection import orthographic_rays
 
@@ -56,27 +56,14 @@ def test_sphere_to_uv_roundtrip_known_points():
 def test_render_returns_correct_shape_and_dtype():
     tex = np.zeros((100, 200, 3), dtype=np.uint8)
     tex[..., 0] = 200
-    out, x, y = render_disk(tex, size=64)
+    out = render_disk(tex, size=64)
     assert out.shape == (64, 64, 3)
     assert out.dtype == np.uint8
-    assert x.shape == (65,)
-    assert y.shape == (65,)
-
-
-def test_render_disk_xy_edges_span_margin():
-    tex = np.full((50, 100, 3), 200, dtype=np.uint8)
-    _, x, y = render_disk(tex, size=64, margin=1.05)
-    np.testing.assert_allclose(x[0], -1.05, atol=1e-12)
-    np.testing.assert_allclose(x[-1], +1.05, atol=1e-12)
-    np.testing.assert_allclose(y[0], +1.05, atol=1e-12)    # top edge of row 0
-    np.testing.assert_allclose(y[-1], -1.05, atol=1e-12)   # bottom edge of last row
-    assert np.all(np.diff(x) > 0)
-    assert np.all(np.diff(y) < 0)
 
 
 def test_render_background_outside_disk():
     tex = np.full((100, 200, 3), 200, dtype=np.uint8)
-    out, _, _ = render_disk(
+    out = render_disk(
         tex, size=64, margin=1.5, background=(10, 20, 30),
     )
     # Corner pixel is definitely outside the disk.
@@ -93,12 +80,12 @@ def test_render_picks_correct_hemisphere():
     tex[:, : w // 2] = [0, 0, 255]  # west -> blue
 
     # Camera on the +Y side looking toward -Y sees the east (red) hemisphere.
-    out, _, _ = render_disk(tex, view_direction=(0, -1, 0), size=128)
+    out = render_disk(tex, view_direction=(0, -1, 0), size=128)
     center = out[64, 64]
     assert center[0] > 200 and center[2] < 50
 
 
-def test_terminator_segments_lie_on_zero_cos_locus():
+def test_disk_terminator_lie_on_zero_cos_locus():
     """Every projected terminator point must un-project to a 3D point
     whose dot product with the sun unit vector is zero."""
     view = np.array([-1.0, 0.0, 0.0])
@@ -106,7 +93,7 @@ def test_terminator_segments_lie_on_zero_cos_locus():
     sun_unit = sun / np.linalg.norm(sun)
     r, u, f = camera_basis(view)
 
-    xs, ys = terminator_segments(view_direction=view, sun_direction=sun)
+    xs, ys = disk_terminator(view_direction=view, sun_direction=sun)
     assert len(xs) >= 1 and len(xs) == len(ys)
 
     for u_im, v_im in zip(xs, ys):
@@ -122,7 +109,7 @@ def test_terminator_disappears_for_full_disk_or_full_shadow():
     # Sun behind camera → entire visible hemisphere lit → no terminator
     # crosses the disk; the curve sits exactly on the limb so projects
     # to the unit circle (not "no segments", but |u^2+v^2| ≈ 1 everywhere).
-    xs, ys = terminator_segments(view_direction=(-1, 0, 0),
+    xs, ys = disk_terminator(view_direction=(-1, 0, 0),
                                  sun_direction=(1, 0, 0))
     for x, y in zip(xs, ys):
         r2 = x**2 + y**2
@@ -182,12 +169,12 @@ def test_flatmap_terminator_lies_on_zero_cos_locus():
 def test_sun_shading_darkens_terminator():
     tex = np.full((100, 200, 3), 200, dtype=np.uint8)
     # View from +X, sun also from +X -> whole visible disk fully lit.
-    lit, _, _ = render_disk(
+    lit = render_disk(
         tex, view_direction=(-1, 0, 0), sun_direction=(1, 0, 0),
         ambient=0.0, size=128,
     )
     # View from +X, sun from -X -> visible disk in shadow (ambient only).
-    dark, _, _ = render_disk(
+    dark = render_disk(
         tex, view_direction=(-1, 0, 0), sun_direction=(-1, 0, 0),
         ambient=0.0, size=128,
     )
@@ -207,14 +194,79 @@ def test_render_accepts_image_path(tmp_path):
     Image.fromarray(tex).save(p)
 
     # str and Path both work, and match passing the array directly.
-    ref, _, _ = render_disk(tex, view_direction=(-1, 0, 0), size=64)
-    by_str, _, _ = render_disk(str(p), view_direction=(-1, 0, 0), size=64)
-    by_path, _, _ = render_disk(Path(p), view_direction=(-1, 0, 0), size=64)
+    ref = render_disk(tex, view_direction=(-1, 0, 0), size=64)
+    by_str = render_disk(str(p), view_direction=(-1, 0, 0), size=64)
+    by_path = render_disk(Path(p), view_direction=(-1, 0, 0), size=64)
     np.testing.assert_array_equal(ref, by_str)
     np.testing.assert_array_equal(ref, by_path)
 
     flat = render_flatmap(str(p), return_array=True)
     assert flat.shape == tex.shape
+
+
+def test_render_info_returns_structured_dict():
+    """render_info echoes inputs and derives sub-observer/sub-solar
+    latitudes — independently of any registry lookup."""
+    info = render_info(
+        np.zeros((100, 200, 3), dtype=np.uint8),
+        view_direction=(-1, 0, 0),
+        sun_direction=(1, 0, 0),
+    )
+    # top-level shape
+    for k in ("texture", "camera", "sun", "output", "caption"):
+        assert k in info
+
+    # raw ndarray has no manifest record → texture fields stay None
+    assert info["texture"]["body"] is None
+    assert info["texture"]["citation"] is None
+
+    # camera: view_direction (-1, 0, 0) → sub-observer at (lat=0, lon=0)
+    assert info["camera"]["view_direction"] == (-1.0, 0.0, 0.0)
+    assert abs(info["camera"]["sub_observer_lat_deg"]) < 1e-9
+    assert abs(info["camera"]["sub_observer_lon_deg"]) < 1e-9
+
+    # sun (1, 0, 0) → sub-solar at (0, 0); 0.3 in z would tilt north
+    assert info["sun"] is not None
+    assert abs(info["sun"]["sub_solar_lat_deg"]) < 1e-9
+    assert "sub-obs" in info["caption"]
+    assert "sun" in info["caption"]
+
+
+def test_render_info_finds_texture_via_manifest():
+    """When passed a registered filename, render_info pulls citation /
+    license / mission from the manifest."""
+    from implanet.assets._registry import texture_entries
+    e = next(x for x in texture_entries() if x["body"] == "Mars")
+    info = render_info(e["filename"], view_direction=(-1, 0, 0))
+    assert info["texture"]["body"] == "Mars"
+    assert info["texture"]["citation"]
+    assert info["texture"]["license"]
+    assert info["caption"].startswith("Mars")
+
+
+def test_render_background_accepts_matplotlib_color_string():
+    """background= takes any matplotlib color spec, not just RGB tuples."""
+    tex = np.full((50, 100, 3), 200, dtype=np.uint8)
+    out_named = render_disk(tex, size=64, margin=1.5, background="white")
+    out_hex   = render_disk(tex, size=64, margin=1.5, background="#ffffff")
+    out_grey  = render_disk(tex, size=64, margin=1.5, background="0.25")
+    out_tuple = render_disk(tex, size=64, margin=1.5, background=(255, 255, 255))
+
+    # Corner is outside the disk → it carries the background colour.
+    np.testing.assert_array_equal(out_named[0, 0], [255, 255, 255])
+    np.testing.assert_array_equal(out_hex[0, 0],   [255, 255, 255])
+    np.testing.assert_array_equal(out_named[0, 0], out_tuple[0, 0])
+
+    # "0.25" = 25% grey ≈ 64
+    g = int(out_grey[0, 0, 0])
+    assert 60 <= g <= 68
+
+
+def test_render_info_no_sun_omits_sun_block():
+    info = render_info(np.zeros((90, 180, 3), dtype=np.uint8),
+                       view_direction=(-1, 0, 0))
+    assert info["sun"] is None
+    assert "sun" not in info["caption"].lower()
 
 
 def test_render_coerces_palette_image(tmp_path):
@@ -226,7 +278,7 @@ def test_render_coerces_palette_image(tmp_path):
     p = tmp_path / "pal.png"
     Image.fromarray(tex).convert("P").save(p)
 
-    img, _, _ = render_disk(p, view_direction=(-1, 0, 0),
+    img = render_disk(p, view_direction=(-1, 0, 0),
                             up=(0, 1, 0), size=64)
     assert img.ndim == 3 and img.shape[-1] == 3   # RGB, not index plane
     assert int(img.max()) > 100                   # real colour values

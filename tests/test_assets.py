@@ -129,7 +129,7 @@ def test_synthetic_daynight_texture(monkeypatch, tmp_path):
     monkeypatch.setenv("IMPLANET_CACHE", str(tmp_path))
     monkeypatch.delenv("IMPLANET_MAPS", raising=False)
 
-    p = assets.get_texture("Reference", "daynight")
+    p = assets.get_texture("bw", "daynight")
     assert p.exists() and p.parent == tmp_path / "maps"
     arr = np.asarray(Image.open(p))
     h, w, _ = arr.shape
@@ -138,9 +138,9 @@ def test_synthetic_daynight_texture(monkeypatch, tmp_path):
     # under the overlaid graticule.
     assert {110, 245}.issubset(set(np.unique(arr[..., 0])))
 
-    day, _, _ = render_disk(Image.open(p).convert("RGB"),
+    day = render_disk(Image.open(p).convert("RGB"),
                             view_direction=(-1, 0, 0), size=128)
-    night, _, _ = render_disk(Image.open(p).convert("RGB"),
+    night = render_disk(Image.open(p).convert("RGB"),
                               view_direction=(1, 0, 0), size=128)
     # Grid-tolerant whole-disk means (default black off-disk pulls both
     # down equally). Day is clearly brighter; the shaded side is
@@ -214,3 +214,69 @@ def test_manual_only_texture_raises(monkeypatch, tmp_path):
     # messenger_basemap_fullres is portal-only (no asset_url).
     with pytest.raises((ValueError, KeyError)):
         assets.get_texture("Mercury", "messenger_basemap_fullres")
+
+
+def test_manual_only_error_carries_actionable_hint(monkeypatch, tmp_path):
+    """The manual-only ValueError should give portal URL + target
+    directory + a re-run pointer — not just a one-line apology."""
+    monkeypatch.setenv("IMPLANET_CACHE", str(tmp_path))
+    monkeypatch.delenv("IMPLANET_MAPS", raising=False)
+    with pytest.raises(ValueError) as exc:
+        assets.get_texture("Mercury", "messenger_basemap_fullres")
+    msg = str(exc.value)
+    assert "manual-only" in msg
+    assert "Download from:" in msg
+    assert "Place it in:" in msg
+    assert "show_attribution" in msg
+
+
+def test_download_disabled_error_lists_three_paths(monkeypatch, tmp_path):
+    """download_if_missing=False on an auto-fetchable but uncached map
+    should explain the three ways to populate the cache."""
+    monkeypatch.setenv("IMPLANET_CACHE", str(tmp_path))
+    monkeypatch.delenv("IMPLANET_MAPS", raising=False)
+    with pytest.raises(FileNotFoundError) as exc:
+        assets.get_texture("Mars", download_if_missing=False)
+    msg = str(exc.value)
+    assert "implanet.get_texture('Mars'" in msg
+    assert "implanet-fetch --body Mars" in msg
+    assert "drop the file" in msg
+
+
+def test_download_maps_filters_and_skips(monkeypatch, tmp_path):
+    """download_maps() honors filters, skips manual-only + oversize, and
+    returns local paths — without hitting the network (we monkeypatch
+    get_texture to record calls and synthesize a path)."""
+    from implanet import download_maps
+    from implanet import fetch as fetch_mod
+
+    calls = []
+
+    def fake_get_texture(body, variant=None, **kw):
+        calls.append((body, variant))
+        return tmp_path / f"{body}_{variant}.bin"
+
+    monkeypatch.setattr("implanet.assets.get_texture", fake_get_texture)
+
+    paths = download_maps(body="Mars", quiet=True)
+    # Only auto-fetchable Mars variants under the size cap are requested;
+    # the 12-GB viking_mdim21_fullres and manual-only HRSC/Tianwen-1 are
+    # excluded.
+    fetched = {v for _, v in calls}
+    assert "sss" in fetched
+    assert "viking_mdim21_1km" in fetched
+    assert "viking_mdim21_fullres" not in fetched      # > 200 MB
+    assert "mars_express_hrsc" not in fetched          # manual-only
+    assert all(isinstance(p, Path) for p in paths)
+    assert len(paths) == len(calls)
+
+
+def test_download_maps_include_large(monkeypatch, tmp_path):
+    from implanet import download_maps
+
+    calls = []
+    monkeypatch.setattr("implanet.assets.get_texture",
+                        lambda body, variant=None, **kw: calls.append(variant)
+                        or (tmp_path / "x.bin"))
+    download_maps(body="Mars", include_large=True, quiet=True)
+    assert "viking_mdim21_fullres" in calls            # now allowed

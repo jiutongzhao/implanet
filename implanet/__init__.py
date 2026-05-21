@@ -1,13 +1,13 @@
 """Render a planet's equirectangular map into a 2D view from a given direction."""
 
-from implanet.render import render_disk, render_flatmap
+from implanet.render import render_disk, render_flatmap, render_info
 from implanet.projection import camera_basis, orthographic_rays, sphere_to_uv
 from implanet.overlays import (
     flatmap_terminator,
     graticule_segments,
     limb_circle,
     subobserver_point,
-    terminator_segments,
+    disk_terminator,
 )
 from implanet.assets import (
     attribution,
@@ -18,19 +18,22 @@ from implanet.assets import (
     show_maps,
     texture_license_notes,
 )
+from implanet.fetch import download_maps
 
 __all__ = [
     "render_disk",
     "render_flatmap",
+    "render_info",
     "camera_basis",
     "orthographic_rays",
     "sphere_to_uv",
     "graticule_segments",
     "limb_circle",
     "subobserver_point",
-    "terminator_segments",
+    "disk_terminator",
     "flatmap_terminator",
     "get_texture",
+    "download_maps",
     "list_maps",
     "show_maps",
     "attribution",
