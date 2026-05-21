@@ -683,20 +683,48 @@ sun = sun / np.linalg.norm(sun)
 
 img = render_disk(get_texture("Mercury"),           # B&W MDIS BDR default
                   view_direction=view, sun_direction=sun,
-                  size=512, ambient=0.03)
-Image.fromarray(img).save("messenger_m1.png")
-# range ≈ 29 000 km; sub-observer sits ~133° from the sub-solar point,
-# so most of the disk is in shadow with a thin sunlit limb.
+                  size=1024, ambient=0.04)
+# range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
+# departing gibbous (the terminator clips the lower-left limb).
+
+# Mercury's albedo is genuinely low, so optionally gamma-stretch for a
+# legible display — this only brightens, it doesn't change the geometry.
+disp = (np.power(img / 255.0, 0.45) * 255).astype(np.uint8)
+Image.fromarray(disp).save("messenger_m1.png")
 ```
 
-`render_disk` only ever needs two 3-vectors (`view_direction`,
-`sun_direction`) in the body-fixed frame — where they come from is up to
-you. To make a **side-by-side comparison**, drop the render next to the
-actual MESSENGER M1 image for that epoch (e.g. from the
-[NASA/JPL Photojournal](https://photojournal.jpl.nasa.gov/)) in your own
-`matplotlib` figure. Swap the SPK URL + body + NAIF codes for other
-flybys (Voyager, New Horizons, Galileo, …); browse the NAIF PDS archive
-at <https://naif.jpl.nasa.gov/pub/naif/pds/> for mission kernels.
+Side-by-side with the real flyby — implanet's render (left) vs. NASA's
+published MESSENGER M1 departure mosaic (right):
+
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
+<sub><b>implanet render</b> — Mercury BDR mosaic, instantaneous geometry
+at 2008-01-14T20:24 UTC, north-up. Gamma-stretched for display
+(Mercury's albedo is genuinely low); the phase/terminator geometry is
+unmodified.</sub>
+</td>
+<td align="center" width="50%">
+<img src="docs/figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
+<sub><b>NASA MESSENGER M1 departure mosaic</b> — contrast-enhanced,
+assembled/oriented in NASA's own frame.
+<a href="https://svs.gsfc.nasa.gov/30340/">NASA SVS 30340</a>.
+Credit: NASA/Johns Hopkins University APL/Carnegie Institution of
+Washington.</sub>
+</td>
+</tr>
+</table>
+
+Both show the same ~80%-lit departing gibbous. They are **not**
+pixel-identical: NASA's mosaic is contrast-stretched and presented in
+its own orientation, while the render shows the true-albedo surface
+north-up at the single 20:24 UTC instant — implanet reproduces the
+*geometry* (which hemisphere, the phase, the terminator), not NASA's
+image processing. `render_disk` only ever needs the two body-fixed
+3-vectors; where they come from is up to you. Swap the SPK URL + body +
+NAIF codes for other flybys (Voyager, New Horizons, Galileo, …); browse
+the NAIF PDS archive at <https://naif.jpl.nasa.gov/pub/naif/pds/>.
 
 ## Map sources
 
