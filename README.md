@@ -749,7 +749,7 @@ catalogue:
 ```python
 import implanet
 implanet.show_attribution("Mars")    # one body, pretty-printed
-implanet.show_attribution()          # all 41 entries
+implanet.show_attribution()          # all 42 entries
 implanet.attribution("Earth", "natural_earth3")   # → dict
 ```
 
@@ -815,7 +815,7 @@ mission/instrument **and** the texture provider in figure captions.
 
 ```bash
 pip install -e .[test]
-pytest tests/                       # 44 tests, ~1 s
+pytest tests/                       # 49 tests, ~1 s
 ```
 
 `tests/test_render.py` covers basis orthonormality, disk geometry,
@@ -846,7 +846,7 @@ implanet/
     └── data/              #   packaged copies of the registry JSON
 
 maps/
-├── manifest.json          # 41 entries, 23 bodies (textures)
+├── manifest.json          # 42 entries, 23 bodies (textures)
 ├── kernels.json           # 15 entries (SPICE kernels)
 └── data/                  # texture cache (dev checkout)
 
