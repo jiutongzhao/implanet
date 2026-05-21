@@ -35,7 +35,7 @@ OUT_DIR = Path(__file__).resolve().parent.parent / "docs" / "disk_views"
 
 EXCLUDE = {"Sun", "Bw"}          # a star and a synthetic test pattern
 SUN = (1.0, 0.0, 0.0)            # sub-solar at lon 0, equator
-AMBIENT = 0.08
+AMBIENT = 0.20                   # shaded-side floor (terminator / pole views)
 # Per-view ambient overrides:
 #  * sun     — the disk is fully lit, but pure-Lambertian cos falloff
 #              darkens the limb to near-black (a real full-phase body
@@ -45,7 +45,7 @@ AMBIENT = 0.08
 # terminator / north_pole / south_pole keep the low default so their
 # day-night contrast stays crisp.
 AMBIENT_BY_VIEW = {"sun": 0.50, "antisun": 0.30}
-SIZE = 512
+SIZE = 1024
 MAX_TEX = 4096                   # downsample huge source maps (memory)
 
 # view name -> (view_direction = camera->centre, up hint)

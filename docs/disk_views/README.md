@@ -2,7 +2,7 @@
 
 Ready-to-use **RGBA** disks, one per body and illumination FOV, named `<body>_<view>.png`. Off-disk pixels are fully transparent (`alpha = 0`); the image spans exactly `x, y in [-1, 1]` (disk inscribed, row 0 = `y = +1`). Grab any file directly.
 
-Sun fixed at +X (sub-solar at lon 0, equator); Lambertian-shaded, ambient 0.08 for terminator/pole views, 0.5 for `sun` (gentle limb darkening on the fully-lit disk) and 0.3 for `antisun` (readable night side).
+Sun fixed at +X (sub-solar at lon 0, equator); Lambertian-shaded, ambient 0.2 for terminator/pole views, 0.5 for `sun` (gentle limb darkening on the fully-lit disk) and 0.3 for `antisun` (readable night side).
 
 | view | camera | shows |
 |---|---|---|
