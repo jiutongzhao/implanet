@@ -70,14 +70,18 @@ def main(size: int = 768) -> Path:
                   cmap=cmap, vmin=0, vmax=255)
         ax.set_aspect("equal")
         ax.set_xticks([]); ax.set_yticks([])
-        ax.set_title(f"{body}\n{entry.get('variant','')}", fontsize=8)
+        # How to fetch this disk: the default call resolves to the
+        # variant shown in the second line.
+        ax.set_title(f'get_texture("{body}")\n→ "{entry.get("variant","")}"',
+                     fontsize=7, family="monospace")
 
     for ax in axes[n:]:
         ax.set_visible(False)
 
     fig.suptitle(f"implanet texture gallery — {n} bodies, default variant",
-                 fontsize=11)
-    fig.tight_layout()
+                 fontsize=12)
+    # Extra row spacing so titles never collide with the disk above.
+    fig.tight_layout(h_pad=3.0, rect=(0, 0, 1, 0.97))
     dest = OUT / "texture_gallery.png"
     fig.savefig(dest, dpi=300, bbox_inches="tight")
     print(f"wrote {dest}  ({n} panels)")
