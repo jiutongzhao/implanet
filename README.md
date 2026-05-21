@@ -69,7 +69,7 @@ Result — a 600×600 RGB PNG, half-lit Earth with the terminator running
 through the middle:
 
 <p align="center">
-<img src="docs/figures/quickstart/earth_quickstart.png" alt="quick-start earth.png" width="320">
+<img src="figures/quickstart/earth_quickstart.png" alt="quick-start earth.png" width="320">
 </p>
 
 `get_texture(body, variant=None)` picks the body's default map; pass a
@@ -139,18 +139,18 @@ that, so the terminator slices across the right side of the disk.
 A small curated showcase of `implanet` output. Each figure is
 regenerable from a script in `examples/`; the full output trees there
 are git-ignored, only this hand-picked set is committed under
-[`docs/figures/`](docs/figures/).
+[`figures/`](figures/).
 
 <table>
 <tr>
 <td width="50%" align="center">
-<img src="docs/figures/transparent_disks_overview.png" alt="transparent disks overview" width="100%"><br>
+<img src="figures/transparent_disks_overview.png" alt="transparent disks overview" width="100%"><br>
 <sub><b>Every body, one view</b> — every body's default texture as a
 transparent RGBA disk on an exact [-1,1] grid (equator view). Built by
 <code>examples/transparent_disks.py</code>.</sub>
 </td>
 <td width="50%" align="center">
-<img src="docs/figures/earth_dayside_spice.png" alt="earth dayside, SPICE-driven" width="100%"><br>
+<img src="figures/earth_dayside_spice.png" alt="earth dayside, SPICE-driven" width="100%"><br>
 <sub><b>SPICE-driven illumination</b> — fully sunlit Earth at
 <code>2026-04-03T00:27:39 UTC</code> (Pacific facing the Sun);
 sub-solar = sub-observer.
@@ -159,13 +159,13 @@ Built by <code>examples/earth_dayside.py</code>.</sub>
 </tr>
 <tr>
 <td width="50%" align="center">
-<img src="docs/figures/earth_natural_earth3.png" alt="Natural Earth III variant" width="100%"><br>
+<img src="figures/earth_natural_earth3.png" alt="Natural Earth III variant" width="100%"><br>
 <sub><b>Natural Earth III variant</b> — the more vivid Earth texture
 option (<code>get_texture("Earth", "natural_earth3")</code>).
 Built by <code>examples/earth_dayside.py</code>.</sub>
 </td>
 <td width="50%" align="center">
-<img src="docs/figures/reference_daynight.png" alt="synthetic day/night reference" width="100%"><br>
+<img src="figures/reference_daynight.png" alt="synthetic day/night reference" width="100%"><br>
 <sub><b>Synthetic day/night reference</b> — built locally (no download)
 to verify viewing geometry / lighting / sub-solar lookups.
 Built by <code>examples/daynight_reference.py</code>.</sub>
@@ -174,7 +174,7 @@ Built by <code>examples/daynight_reference.py</code>.</sub>
 </table>
 
 A full index (with regenerate commands) lives at
-[`docs/figures/README.md`](docs/figures/README.md).
+[`figures/README.md`](figures/README.md).
 
 ### Texture catalog
 
@@ -183,7 +183,7 @@ orthographic disk per body's default variant, same lighting for all.
 Regenerate with `python examples/texture_gallery.py`.
 
 <p align="center">
-<img src="docs/figures/gallery/texture_gallery.png" alt="texture gallery — every body's default" width="80%">
+<img src="figures/gallery/texture_gallery.png" alt="texture gallery — every body's default" width="80%">
 </p>
 
 ### Per-body variant comparisons
@@ -199,14 +199,14 @@ multi-variant body to `examples/figures_gallery/`).
 <tr>
 <td align="center" width="50%">
 <b>Mercury</b> (3 variants)<br>
-<img src="docs/figures/gallery/variants_mercury.png" alt="Mercury variants" width="100%"><br>
+<img src="figures/gallery/variants_mercury.png" alt="Mercury variants" width="100%"><br>
 <sub>Default <code>sss</code> (Solar System Scope colour),
 plus the B&W <code>messenger_bdr_mono</code> BDR basemap and the
 pseudo-color <code>messenger_enhanced_color</code>.</sub>
 </td>
 <td align="center" width="50%">
 <b>Venus</b> (2 variants)<br>
-<img src="docs/figures/gallery/variants_venus.png" alt="Venus variants" width="100%"><br>
+<img src="figures/gallery/variants_venus.png" alt="Venus variants" width="100%"><br>
 <sub>Cloud-top UV (<code>sss_atmosphere</code>, default) vs. the
 Magellan SAR surface mosaic (<code>sss_surface</code>).</sub>
 </td>
@@ -214,13 +214,13 @@ Magellan SAR surface mosaic (<code>sss_surface</code>).</sub>
 <tr>
 <td align="center" width="50%">
 <b>Earth</b> (6 variants)<br>
-<img src="docs/figures/gallery/variants_earth.png" alt="Earth variants" width="100%"><br>
+<img src="figures/gallery/variants_earth.png" alt="Earth variants" width="100%"><br>
 <sub>Blue Marble at two resolutions, the Solar System Scope cloud /
 day / night composites, and the vivid Natural Earth III.</sub>
 </td>
 <td align="center" width="50%">
 <b>Moon</b> (4 variants)<br>
-<img src="docs/figures/gallery/variants_moon.png" alt="Moon variants" width="100%"><br>
+<img src="figures/gallery/variants_moon.png" alt="Moon variants" width="100%"><br>
 <sub>Clementine UVVIS (default), two LROC color composites, and the
 Solar System Scope re-processing.</sub>
 </td>
@@ -228,14 +228,14 @@ Solar System Scope re-processing.</sub>
 <tr>
 <td align="center" width="50%">
 <b>Mars</b> (2 auto-fetchable variants)<br>
-<img src="docs/figures/gallery/variants_mars.png" alt="Mars variants" width="100%"><br>
+<img src="figures/gallery/variants_mars.png" alt="Mars variants" width="100%"><br>
 <sub>Solar System Scope (default) vs. the Viking MDIM 2.1 1-km mosaic.
 HRSC / Tianwen-1 are manual-only; the 12-GB Viking full-res is
 skipped by the gallery script.</sub>
 </td>
 <td align="center" width="50%">
 <b>Jupiter</b> (2 variants)<br>
-<img src="docs/figures/gallery/variants_jupiter.png" alt="Jupiter variants" width="100%"><br>
+<img src="figures/gallery/variants_jupiter.png" alt="Jupiter variants" width="100%"><br>
 <sub>Cassini ISS PIA07782 (default) vs. the Solar System Scope
 composite.</sub>
 </td>
@@ -248,16 +248,16 @@ Ready-to-grab **transparent** RGBA disks — every body from five
 illumination FOVs (`sun`, `antisun`, `terminator`, `north_pole`,
 `south_pole`), on an exact `[-1, 1]` grid with `alpha=0` off-disk. The
 full set (20 bodies × 5 views = 100 PNGs) lives in
-[`docs/disk_views/`](docs/disk_views/) — see its
-[gallery README](docs/disk_views/README.md). Regenerate with
+[`figures/disk_views/`](figures/disk_views/) — see its
+[gallery README](figures/disk_views/README.md). Regenerate with
 `python examples/disk_views.py`. Earth, all five views:
 
 <p align="center">
-<img src="docs/disk_views/earth_sun.png" alt="Earth sun" width="15%">
-<img src="docs/disk_views/earth_terminator.png" alt="Earth terminator" width="15%">
-<img src="docs/disk_views/earth_antisun.png" alt="Earth antisun" width="15%">
-<img src="docs/disk_views/earth_north_pole.png" alt="Earth north pole" width="15%">
-<img src="docs/disk_views/earth_south_pole.png" alt="Earth south pole" width="15%">
+<img src="figures/disk_views/earth_sun.png" alt="Earth sun" width="15%">
+<img src="figures/disk_views/earth_terminator.png" alt="Earth terminator" width="15%">
+<img src="figures/disk_views/earth_antisun.png" alt="Earth antisun" width="15%">
+<img src="figures/disk_views/earth_north_pole.png" alt="Earth north pole" width="15%">
+<img src="figures/disk_views/earth_south_pole.png" alt="Earth south pole" width="15%">
 </p>
 
 ## Conventions
@@ -644,7 +644,7 @@ fig.savefig("earth_flatmap.png", dpi=140, bbox_inches="tight")
 Result:
 
 <p align="center">
-<img src="docs/figures/quickstart/earth_flatmap_terminator.png" alt="flatmap + terminator example" width="640">
+<img src="figures/quickstart/earth_flatmap_terminator.png" alt="flatmap + terminator example" width="640">
 </p>
 
 Pass `rotation_lon_deg=θ` to `render_flatmap` to spin the body under a
@@ -721,14 +721,14 @@ published MESSENGER M1 departure mosaic (right):
 <table>
 <tr>
 <td align="center" valign="top" width="50%">
-<img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
+<img src="figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
 <sub><b>implanet render</b> — Mercury <code>sss</code> mosaic with a
 gentle contrast/brightness lift on the texture, tuned to NASA's mean
 tone (~113/255). Geometry at 2008-01-14T20:24 UTC, north-up — so its
 terminator falls on the left.</sub>
 </td>
 <td align="center" valign="top" width="50%">
-<img src="docs/figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
+<img src="figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
 <sub><b>NASA MESSENGER M1 departure mosaic</b> — contrast-enhanced and
 rolled to NASA's own display frame, so its terminator is on the right.
 <a href="https://svs.gsfc.nasa.gov/30340/">NASA SVS 30340</a>; credit
@@ -841,7 +841,7 @@ python examples/demo.py
 
 All examples write into `examples/<some-output-dir>/` which is
 git-ignored; the committed showcase set lives under
-[`docs/figures/`](docs/figures/).
+[`figures/`](figures/).
 
 ## Attribution & citation
 

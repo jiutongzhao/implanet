@@ -14,8 +14,8 @@ Every PNG is RGBA with off-disk ``alpha = 0`` on an exact ``[-1, 1]`` grid
 transparent fill is black, so downscaling never rings the limb with a
 white halo.
 
-Output: ``docs/disk_views/<body>_<view>.png`` (committed — grab directly),
-plus ``docs/disk_views/README.md``.
+Output: ``figures/disk_views/<body>_<view>.png`` (committed — grab
+directly), plus ``figures/disk_views/README.md``.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from implanet import render_disk
 from implanet.assets import get_texture
 from implanet.assets._registry import texture_entries
 
-OUT_DIR = Path(__file__).resolve().parent.parent / "docs" / "disk_views"
+OUT_DIR = Path(__file__).resolve().parent.parent / "figures" / "disk_views"
 
 EXCLUDE = {"Sun", "Bw"}          # a star and a synthetic test pattern
 SUN = (1.0, 0.0, 0.0)            # sub-solar at lon 0, equator

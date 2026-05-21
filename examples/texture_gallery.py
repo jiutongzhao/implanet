@@ -9,7 +9,7 @@ Writes ``examples/figures_gallery/texture_gallery.png``. Manual-only
 defaults (currently just Titan) are skipped automatically.
 
 Renders at full resolution (size=768, dpi=300). The committed preview
-under ``docs/figures/gallery/`` is downsampled to keep the repo light;
+under ``figures/gallery/`` is downsampled to keep the repo light;
 re-run this script for the print-quality version.
 """
 from __future__ import annotations
