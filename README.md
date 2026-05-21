@@ -657,27 +657,28 @@ flyby 1 (M1)** departing crescent at `2008-01-14T20:24:00 UTC`
 (~80 min after closest approach):
 
 ```python
-import numpy as np, spiceypy as spice
+import numpy as np
+import spiceypy
 from PIL import Image, ImageEnhance
 from implanet import render_disk, get_texture
 
 for k in ("naif0012.tls", "pck00011.tpc", "de440s.bsp",
           "msgr_040803_080216_120401.bsp"):
-    spice.furnsh(f"kernels/{k}")
+    spiceypy.furnsh(f"kernels/{k}")
 
 utc = "2008-01-14T20:24:00"
-et = spice.str2et(utc)
+et = spiceypy.str2et(utc)
 
 # MESSENGER (NAIF -236) position relative to Mercury (199), in J2000,
 # then rotate into the body-fixed IAU_MERCURY frame. (de440s has no
 # Mercury-centre IAU chain, so rotate explicitly via pxform.)
-pos_j2000, lt = spice.spkpos("-236", et, "J2000", "LT", "199")
-R = spice.pxform("J2000", "IAU_MERCURY", et)
+pos_j2000, lt = spiceypy.spkpos("-236", et, "J2000", "LT", "199")
+R = spiceypy.pxform("J2000", "IAU_MERCURY", et)
 sc = R @ np.array(pos_j2000)
 view = -sc / np.linalg.norm(sc)                     # camera → planet centre
 
 # Mercury → Sun, same frame.
-sun_j2000, _ = spice.spkpos("SUN", et, "J2000", "LT", "199")
+sun_j2000, _ = spiceypy.spkpos("SUN", et, "J2000", "LT", "199")
 sun = R @ np.array(sun_j2000)
 sun = sun / np.linalg.norm(sun)
 

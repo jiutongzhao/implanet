@@ -24,7 +24,7 @@ from typing import Sequence, Tuple, Union
 
 import numpy as np
 
-import spiceypy as spice
+import spiceypy
 
 from implanet.assets import download, get_kernel, kernels_dir
 from implanet.assets._registry import find_kernel
@@ -123,14 +123,14 @@ def load_kernels(kernel_dir: Union[str, Path, None] = None) -> None:
     if _loaded:
         return
     for path in _generic_paths(kernel_dir):
-        spice.furnsh(str(path))
+        spiceypy.furnsh(str(path))
     _loaded = True
 
 
 def utc_to_et(utc: str) -> float:
     """Convert UTC string ('2026-05-14T12:00:00') to TDB ephemeris seconds."""
     load_kernels()
-    return spice.str2et(utc)
+    return spiceypy.str2et(utc)
 
 
 def _resolve_body(body: str) -> Tuple[str, str]:
@@ -150,8 +150,8 @@ def _direction_in_body_frame(target: str, frame: str, origin: str,
     barycenter-only ephemeris lacks. Going through J2000 sidesteps that:
     pxform reads orientation from the PCK and needs no SPK data.
     """
-    pos_j2000, _ = spice.spkpos(target, et, "J2000", abcorr, origin)
-    R = spice.pxform("J2000", frame, et)
+    pos_j2000, _ = spiceypy.spkpos(target, et, "J2000", abcorr, origin)
+    R = spiceypy.pxform("J2000", frame, et)
     pos_iau = np.asarray(R, dtype=np.float64) @ np.asarray(pos_j2000,
                                                             dtype=np.float64)
     n = np.linalg.norm(pos_iau)
@@ -184,7 +184,7 @@ def sun_direction(body: str, utc: str,
     """
     load_kernels()
     frame, origin = _resolve_body(body)
-    et = spice.str2et(utc)
+    et = spiceypy.str2et(utc)
     return _direction_in_body_frame("SUN", frame, origin, et, abcorr)
 
 
@@ -246,7 +246,7 @@ def view_direction_from_earth(body: str, utc: str,
     """
     load_kernels()
     frame, origin = _resolve_body(body)
-    et = spice.str2et(utc)
+    et = spiceypy.str2et(utc)
     return _direction_in_body_frame("EARTH", frame, origin, et, abcorr)
 
 

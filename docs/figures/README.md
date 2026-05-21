@@ -10,10 +10,7 @@ git-ignored; only this hand-picked set is committed).
 | ![earth ne3](earth_natural_earth3.png)<br>`earth_natural_earth3.png` | The vivid `natural_earth3` Earth variant (Natural Earth III), ~2× brighter than the default Blue Marble. | `examples/earth_dayside.py` (variant) |
 | ![earth dayside](earth_dayside_spice.png)<br>`earth_dayside_spice.png` | Fully sunlit Earth with SPICE-derived geometry — sub-solar = sub-observer at `2026-04-03T00:27:39 UTC` (Pacific facing the Sun). | `examples/earth_dayside.py` |
 | ![daynight](reference_daynight.png)<br>`reference_daynight.png` | The synthetic day/night reference texture (built locally, no download) used to verify viewing geometry. | `examples/daynight_reference.py` |
-| ![v1 jupiter](voyager1_jupiter.png)<br>`voyager1_jupiter.png` | Voyager 1 Jupiter flyby reproduction (1979-03-05), camera from the reconstructed spacecraft SPK. | `examples/voyager1_jupiter.py` |
-| ![v2 neptune](voyager2_neptune.png)<br>`voyager2_neptune.png` | Voyager 2 Neptune flyby reproduction (1989-08-25), exact closest-approach geometry. | `examples/voyager2_neptune.py` |
-| ![nh pluto](new_horizons_pluto.png)<br>`new_horizons_pluto.png` | New Horizons Pluto flyby reproduction (2015-07-14). | `examples/new_horizons_pluto.py` |
 
 Illumination/phase in the SPICE-driven figures is physically correct for
-the stated UTC; the flyby camera positions come from reconstructed
-mission kernels. Map credits are in `maps/manifest.json`.
+the stated UTC. Map credits are in `maps/manifest.json`. For a
+spacecraft-vantage flyby example (MESSENGER M1), see the main README.
