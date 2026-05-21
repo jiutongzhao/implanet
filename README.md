@@ -242,6 +242,24 @@ composite.</sub>
 </tr>
 </table>
 
+### Transparent disk views
+
+Ready-to-grab **transparent** RGBA disks — every body from five
+illumination FOVs (`sun`, `antisun`, `terminator`, `north_pole`,
+`south_pole`), on an exact `[-1, 1]` grid with `alpha=0` off-disk. The
+full set (20 bodies × 5 views = 100 PNGs) lives in
+[`docs/disk_views/`](docs/disk_views/) — see its
+[gallery README](docs/disk_views/README.md). Regenerate with
+`python examples/disk_views.py`. Earth, all five views:
+
+<p align="center">
+<img src="docs/disk_views/earth_sun.png" alt="Earth sun" width="15%">
+<img src="docs/disk_views/earth_terminator.png" alt="Earth terminator" width="15%">
+<img src="docs/disk_views/earth_antisun.png" alt="Earth antisun" width="15%">
+<img src="docs/disk_views/earth_north_pole.png" alt="Earth north pole" width="15%">
+<img src="docs/disk_views/earth_south_pole.png" alt="Earth south pole" width="15%">
+</p>
+
 ## Conventions
 
 All vectors live in the **body-fixed IAU frame** of the rendered body:

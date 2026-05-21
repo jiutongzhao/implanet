@@ -113,6 +113,20 @@ def main(argv=None) -> int:
 
 
 def _write_readme(done: list[str], skipped: list[str]) -> None:
+    views = list(VIEWS)
+    # body x view gallery (HTML so thumbnails can be sized small)
+    rows = ["<tr><th align=\"left\">body</th>"
+            + "".join(f"<th>{v}</th>" for v in views) + "</tr>"]
+    for body in done:
+        cells = "".join(
+            f'<td align="center">'
+            f'<img src="{body.lower()}_{v}.png" width="110" '
+            f'alt="{body} {v}"></td>'
+            for v in views
+        )
+        rows.append(f'<tr><td align="left"><b>{body}</b></td>{cells}</tr>')
+    table = "<table>\n" + "\n".join(rows) + "\n</table>"
+
     (OUT_DIR / "README.md").write_text(
         "# Transparent disk views\n\n"
         "Ready-to-use **RGBA** disks, one per body and illumination FOV, "
@@ -126,15 +140,16 @@ def _write_readme(done: list[str], skipped: list[str]) -> None:
         "| view | camera | shows |\n"
         "|---|---|---|\n"
         "| `sun` | Sun→body line | fully-lit dayside |\n"
-        "| `antisun` | opposite the Sun | night hemisphere (ambient only) |\n"
+        "| `antisun` | opposite the Sun | night hemisphere |\n"
         "| `terminator` | 90° from the Sun | day/night split down the middle |\n"
         "| `north_pole` | down the +Z pole | pole-on, sun grazing one side |\n"
         "| `south_pole` | down the −Z pole | pole-on |\n\n"
         "Display with `interpolation='nearest'` (or composite over a "
         "background) to avoid blending the limb into the transparent "
         "pixels.\n\n"
-        "Bodies: " + ", ".join(done) + "\n"
-        + (("\nSkipped (manual-only / unavailable): "
+        "## Gallery\n\n"
+        + table + "\n\n"
+        + (("Skipped (manual-only / unavailable): "
             + ", ".join(skipped) + "\n") if skipped else "")
     )
 
