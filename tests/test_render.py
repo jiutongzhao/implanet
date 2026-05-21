@@ -6,7 +6,7 @@ import pytest
 from implanet import (
     render_disk, render_flatmap, render_info,
     camera_basis, sphere_to_uv,
-    terminator_segments, flatmap_terminator,
+    disk_terminator, flatmap_terminator,
 )
 from implanet.projection import orthographic_rays
 
@@ -85,7 +85,7 @@ def test_render_picks_correct_hemisphere():
     assert center[0] > 200 and center[2] < 50
 
 
-def test_terminator_segments_lie_on_zero_cos_locus():
+def test_disk_terminator_lie_on_zero_cos_locus():
     """Every projected terminator point must un-project to a 3D point
     whose dot product with the sun unit vector is zero."""
     view = np.array([-1.0, 0.0, 0.0])
@@ -93,7 +93,7 @@ def test_terminator_segments_lie_on_zero_cos_locus():
     sun_unit = sun / np.linalg.norm(sun)
     r, u, f = camera_basis(view)
 
-    xs, ys = terminator_segments(view_direction=view, sun_direction=sun)
+    xs, ys = disk_terminator(view_direction=view, sun_direction=sun)
     assert len(xs) >= 1 and len(xs) == len(ys)
 
     for u_im, v_im in zip(xs, ys):
@@ -109,7 +109,7 @@ def test_terminator_disappears_for_full_disk_or_full_shadow():
     # Sun behind camera → entire visible hemisphere lit → no terminator
     # crosses the disk; the curve sits exactly on the limb so projects
     # to the unit circle (not "no segments", but |u^2+v^2| ≈ 1 everywhere).
-    xs, ys = terminator_segments(view_direction=(-1, 0, 0),
+    xs, ys = disk_terminator(view_direction=(-1, 0, 0),
                                  sun_direction=(1, 0, 0))
     for x, y in zip(xs, ys):
         r2 = x**2 + y**2

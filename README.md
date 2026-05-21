@@ -495,7 +495,7 @@ graticule_segments(view_direction, up=(0,0,1),
 limb_circle(samples=360)                           # → (x, y)  two 1-D arrays
 subobserver_point(view_direction, up=(0,0,1))      # → (lat_deg, lon_deg) floats
 
-terminator_segments(view_direction, sun_direction, up=(0,0,1), samples=361)
+disk_terminator(view_direction, sun_direction, up=(0,0,1), samples=361)
     # → (xs, ys)  parallel lists of 1-D arrays: the projected great
     #   circle {P : P · sun_unit = 0}, clipped at the limb.
 
@@ -550,7 +550,7 @@ path:
 import matplotlib.pyplot as plt
 from implanet import (
     render_disk, render_info, get_texture,
-    graticule_segments, limb_circle, terminator_segments,
+    graticule_segments, limb_circle, disk_terminator,
     subobserver_point,
 )
 
@@ -578,7 +578,7 @@ for xs, ys in zip(*g["meridians"]):  ax.plot(xs, ys, ":", color="0.25", lw=0.7)
 lx, ly = limb_circle()
 ax.plot(lx, ly, "-", color="black", lw=1.0)
 
-for xs, ys in zip(*terminator_segments(view_direction=view, sun_direction=sun)):
+for xs, ys in zip(*disk_terminator(view_direction=view, sun_direction=sun)):
     ax.plot(xs, ys, "--", color="white", lw=1.2)
 
 sub_lat, sub_lon = subobserver_point(view_direction=view)

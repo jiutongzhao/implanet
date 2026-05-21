@@ -158,7 +158,7 @@ def _orthonormal_pair_perp_to(v: np.ndarray) -> tuple:
     return e1, e2
 
 
-def terminator_segments(
+def disk_terminator(
     view_direction: Sequence[float],
     sun_direction: Sequence[float],
     up: Sequence[float] = (0.0, 0.0, 1.0),
@@ -184,11 +184,11 @@ def terminator_segments(
     Sun directly behind the camera produces a full-circle terminator at
     the limb (the planet is fully lit):
 
-        >>> xs, ys = terminator_segments((-1, 0, 0), sun_direction=(1, 0, 0))
+        >>> xs, ys = disk_terminator((-1, 0, 0), sun_direction=(1, 0, 0))
 
     Sun offset 45° produces a half-arc across the disk:
 
-        >>> xs, ys = terminator_segments((-1, 0, 0), sun_direction=(1, 1, 0))
+        >>> xs, ys = disk_terminator((-1, 0, 0), sun_direction=(1, 1, 0))
         >>> for x, y in zip(xs, ys):
         ...     ax.plot(x, y, color="white", lw=1.0, linestyle="--")
     """

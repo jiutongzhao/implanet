@@ -7,7 +7,7 @@ from implanet.overlays import (
     graticule_segments,
     limb_circle,
     subobserver_point,
-    terminator_segments,
+    disk_terminator,
 )
 from implanet.assets import (
     attribution,
@@ -30,7 +30,7 @@ __all__ = [
     "graticule_segments",
     "limb_circle",
     "subobserver_point",
-    "terminator_segments",
+    "disk_terminator",
     "flatmap_terminator",
     "get_texture",
     "download_maps",
