@@ -636,31 +636,41 @@ frame.
 ### Spacecraft flyby geometry (e.g. MESSENGER M1)
 
 `sun_direction` / `view_direction_from_earth` cover Sun- and
-Earth-based vantages. For a **spacecraft** vantage you drop to
-`spiceypy` directly: load a mission trajectory kernel (the registry
-fetches it for you via `get_kernel`), ask SPICE where the spacecraft
-sits relative to the body, rotate that into the body-fixed frame, and
-feed the result to `render_disk`.
+Earth-based vantages. For a **spacecraft** vantage, implanet doesn't add
+any helper — you grab the kernels yourself and use `spiceypy` directly
+to get the view and sun directions, then hand them to `render_disk`.
 
-Here's the MESSENGER **Mercury flyby 1 (M1)** departing crescent, at
-`2008-01-14T20:24:00 UTC` (~80 min after closest approach):
+Download the generic kernels plus the mission trajectory SPK straight
+from NAIF (any tool works; `wget` shown):
+
+```bash
+mkdir -p kernels && cd kernels
+wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls
+wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc
+wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp
+wget https://naif.jpl.nasa.gov/pub/naif/pds/data/mess-e_v_h-spice-6-v1.0/messsp_1000/data/spk/msgr_040803_080216_120401.bsp
+cd ..
+```
+
+Then it's pure `spiceypy` for the geometry — the MESSENGER **Mercury
+flyby 1 (M1)** departing crescent at `2008-01-14T20:24:00 UTC`
+(~80 min after closest approach):
 
 ```python
 import numpy as np, spiceypy as spice
 from PIL import Image
-from implanet import render_disk, get_texture, load_kernels
-from implanet.assets import get_kernel
+from implanet import render_disk, get_texture
 
-load_kernels()                                      # generic lsk/pck/de440s
-spice.furnsh(str(get_kernel("messenger_cruise")))   # MESSENGER SPK (auto-downloaded)
+for k in ("naif0012.tls", "pck00011.tpc", "de440s.bsp",
+          "msgr_040803_080216_120401.bsp"):
+    spice.furnsh(f"kernels/{k}")
 
 utc = "2008-01-14T20:24:00"
 et = spice.str2et(utc)
 
 # MESSENGER (NAIF -236) position relative to Mercury (199), in J2000,
 # then rotate into the body-fixed IAU_MERCURY frame. (de440s has no
-# Mercury-centre IAU chain, so rotate explicitly via pxform — the same
-# trick implanet.ephemeris uses.)
+# Mercury-centre IAU chain, so rotate explicitly via pxform.)
 pos_j2000, lt = spice.spkpos("-236", et, "J2000", "LT", "199")
 R = spice.pxform("J2000", "IAU_MERCURY", et)
 sc = R @ np.array(pos_j2000)
@@ -679,14 +689,14 @@ Image.fromarray(img).save("messenger_m1.png")
 # so most of the disk is in shadow with a thin sunlit limb.
 ```
 
-To make a **side-by-side comparison**, drop the render next to the
+`render_disk` only ever needs two 3-vectors (`view_direction`,
+`sun_direction`) in the body-fixed frame — where they come from is up to
+you. To make a **side-by-side comparison**, drop the render next to the
 actual MESSENGER M1 image for that epoch (e.g. from the
-[NASA/JPL Photojournal](https://photojournal.jpl.nasa.gov/)) in your
-own `matplotlib` figure — implanet renders the geometry; it doesn't
-fetch mission press images. Swap the kernel id + body + NAIF codes for
-other flybys (Voyager, New Horizons, Galileo, …); the kernel registry
-lists what's available (`implanet-fetch` is maps-only, but
-`implanet.assets.kernel_entries()` enumerates the SPK catalogue).
+[NASA/JPL Photojournal](https://photojournal.jpl.nasa.gov/)) in your own
+`matplotlib` figure. Swap the SPK URL + body + NAIF codes for other
+flybys (Voyager, New Horizons, Galileo, …); browse the NAIF PDS archive
+at <https://naif.jpl.nasa.gov/pub/naif/pds/> for mission kernels.
 
 ## Map sources
 
