@@ -200,9 +200,9 @@ multi-variant body to `examples/figures_gallery/`).
 <td align="center" width="50%">
 <b>Mercury</b> (3 variants)<br>
 <img src="docs/figures/gallery/variants_mercury.png" alt="Mercury variants" width="100%"><br>
-<sub>Default <code>messenger_bdr_mono</code> (B&W BDR basemap),
-plus the pseudo-color <code>messenger_enhanced_color</code> and the
-Solar System Scope re-processing.</sub>
+<sub>Default <code>sss</code> (Solar System Scope colour),
+plus the B&W <code>messenger_bdr_mono</code> BDR basemap and the
+pseudo-color <code>messenger_enhanced_color</code>.</sub>
 </td>
 <td align="center" width="50%">
 <b>Venus</b> (2 variants)<br>
@@ -681,7 +681,7 @@ sun_j2000, _ = spice.spkpos("SUN", et, "J2000", "LT", "199")
 sun = R @ np.array(sun_j2000)
 sun = sun / np.linalg.norm(sun)
 
-img = render_disk(get_texture("Mercury"),           # B&W MDIS BDR default
+img = render_disk(get_texture("Mercury", "messenger_bdr_mono"),  # B&W MDIS basemap
                   view_direction=view, sun_direction=sun,
                   size=1024, ambient=0.04)
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit

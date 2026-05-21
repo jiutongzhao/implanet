@@ -57,6 +57,18 @@ attribution requirement is hard to miss.
 - **asset_url**: https://upload.wikimedia.org/wikipedia/commons/a/a4/Solarsystemscope_texture_8k_sun.jpg
 - **note**: The Sun has no meaningful sub-solar geometry; render with ambient=1.0.
 
+### Mercury / sss
+
+- **agency**: NASA
+- **mission**: MESSENGER
+- **instrument**: Mercury Dual Imaging System (MDIS)
+- **description**: Color-enhanced MDIS global mosaic, processed by Solar System Scope from MESSENGER data
+- **provenance**: Wikimedia Commons / Solar System Scope (INOVE s.r.o.)
+- **license**: CC BY 4.0 (texture); underlying MESSENGER imagery is public domain (NASA/JHU-APL)
+- **citation**: Solar System Scope (CC BY 4.0). Underlying data: Hawkins, S. E., et al. MESSENGER/MDIS team, NASA/JHU-APL.
+- **portal_url**: https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_mercury.jpg
+- **asset_url**: https://upload.wikimedia.org/wikipedia/commons/2/27/Solarsystemscope_texture_8k_mercury.jpg
+
 ### Mercury / messenger_bdr_mono
 
 - **agency**: NASA
@@ -80,18 +92,6 @@ attribution requirement is hard to miss.
 - **citation**: Denevi, B. W. et al., USGS Astrogeology; MESSENGER MDIS team, NASA/JHU-APL. Enhanced color mosaic constructed from MDIS WAC filters 996/748/430 nm in PCA stretch.
 - **portal_url**: https://astrogeology.usgs.gov/search/map/Mercury/Messenger/Global/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_665m
 - **asset_url**: https://upload.wikimedia.org/wikipedia/commons/4/41/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_32ppd.jpg
-
-### Mercury / sss
-
-- **agency**: NASA
-- **mission**: MESSENGER
-- **instrument**: Mercury Dual Imaging System (MDIS)
-- **description**: Color-enhanced MDIS global mosaic, processed by Solar System Scope from MESSENGER data
-- **provenance**: Wikimedia Commons / Solar System Scope (INOVE s.r.o.)
-- **license**: CC BY 4.0 (texture); underlying MESSENGER imagery is public domain (NASA/JHU-APL)
-- **citation**: Solar System Scope (CC BY 4.0). Underlying data: Hawkins, S. E., et al. MESSENGER/MDIS team, NASA/JHU-APL.
-- **portal_url**: https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_mercury.jpg
-- **asset_url**: https://upload.wikimedia.org/wikipedia/commons/2/27/Solarsystemscope_texture_8k_mercury.jpg
 
 ### Mercury / messenger_basemap_fullres
 
