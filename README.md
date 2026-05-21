@@ -685,12 +685,10 @@ img = render_disk(get_texture("Mercury", "messenger_bdr_mono"),  # B&W MDIS BDR 
                   view_direction=view, sun_direction=sun,
                   size=1024, ambient=0.04)
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
-# departing gibbous (the terminator clips the lower-left limb).
-
-# Mercury's albedo is genuinely low, so optionally gamma-stretch for a
-# legible display — this only brightens, it doesn't change the geometry.
-disp = (np.power(img / 255.0, 0.45) * 255).astype(np.uint8)
-Image.fromarray(disp).save("messenger_m1.png")
+# departing gibbous (the terminator clips the lower-left limb). The disk
+# looks dark because Mercury's albedo is genuinely low — this is the
+# unprocessed render.
+Image.fromarray(img).save("messenger_m1.png")
 ```
 
 Side-by-side with the real flyby — implanet's render (left) vs. NASA's
@@ -702,9 +700,9 @@ published MESSENGER M1 departure mosaic (right):
 <img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
 <sub><b>implanet render</b> — Mercury <code>messenger_bdr_mono</code>
 MDIS B&W basemap, instantaneous geometry at 2008-01-14T20:24 UTC,
-north-up. Gamma + contrast-enhanced for display (Mercury's albedo is
-genuinely low and flat); the phase/terminator geometry is unmodified.
-Its terminator falls on the left because the render is north-up, where
+north-up. Unprocessed output — it looks dark because Mercury's albedo
+is genuinely low (NASA's mosaic is heavily contrast-stretched). Its
+terminator falls on the left because the render is north-up, where
 NASA's mosaic is rolled to its own display frame.</sub>
 </td>
 <td align="center" width="50%">
