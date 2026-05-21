@@ -23,6 +23,23 @@
     },
     {
       "body": "Mercury",
+      "variant": "sss",
+      "agency": "NASA",
+      "mission": "MESSENGER",
+      "instrument": "Mercury Dual Imaging System (MDIS)",
+      "description": "Color-enhanced MDIS global mosaic, processed by Solar System Scope from MESSENGER data",
+      "format": "JPEG",
+      "resolution": "8192x4096",
+      "asset_url": "https://upload.wikimedia.org/wikipedia/commons/2/27/Solarsystemscope_texture_8k_mercury.jpg",
+      "portal_url": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_mercury.jpg",
+      "filename": "mercury_sss_8k.jpg",
+      "size_bytes_estimated": 15035740,
+      "provenance": "Wikimedia Commons / Solar System Scope (INOVE s.r.o.)",
+      "license": "CC BY 4.0 (texture); underlying MESSENGER imagery is public domain (NASA/JHU-APL)",
+      "citation": "Solar System Scope (CC BY 4.0). Underlying data: Hawkins, S. E., et al. MESSENGER/MDIS team, NASA/JHU-APL."
+    },
+    {
+      "body": "Mercury",
       "variant": "messenger_bdr_mono",
       "agency": "NASA",
       "mission": "MESSENGER",
@@ -54,23 +71,6 @@
       "provenance": "Wikimedia Commons (USGS Astrogeology)",
       "license": "Public Domain (NASA/JHU-APL/USGS)",
       "citation": "Denevi, B. W. et al., USGS Astrogeology; MESSENGER MDIS team, NASA/JHU-APL. Enhanced color mosaic constructed from MDIS WAC filters 996/748/430 nm in PCA stretch."
-    },
-    {
-      "body": "Mercury",
-      "agency": "NASA",
-      "mission": "MESSENGER",
-      "instrument": "Mercury Dual Imaging System (MDIS)",
-      "description": "Color-enhanced MDIS global mosaic, processed by Solar System Scope from MESSENGER data",
-      "format": "JPEG",
-      "resolution": "8192x4096",
-      "asset_url": "https://upload.wikimedia.org/wikipedia/commons/2/27/Solarsystemscope_texture_8k_mercury.jpg",
-      "portal_url": "https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_mercury.jpg",
-      "filename": "mercury_sss_8k.jpg",
-      "size_bytes_estimated": 15035740,
-      "provenance": "Wikimedia Commons / Solar System Scope (INOVE s.r.o.)",
-      "license": "CC BY 4.0 (texture); underlying MESSENGER imagery is public domain (NASA/JHU-APL)",
-      "citation": "Solar System Scope (CC BY 4.0). Underlying data: Hawkins, S. E., et al. MESSENGER/MDIS team, NASA/JHU-APL.",
-      "variant": "sss"
     },
     {
       "body": "Mercury",
@@ -692,7 +692,7 @@
       "citation": "NASA/JHU-APL/SwRI New Horizons LORRI/MVIC team, 2015."
     },
     {
-      "body": "bw",
+      "body": "Bw",
       "variant": "daynight",
       "agency": "implanet",
       "mission": "synthetic",

@@ -10,7 +10,7 @@ identical lighting so the differences are easy to see.
 Writes one PNG per multi-variant body to ``examples/figures_gallery/``.
 
 Renders at full resolution (size=1024, dpi=300). The committed previews
-under ``docs/figures/gallery/`` are downsampled to keep the repo light;
+under ``figures/gallery/`` are downsampled to keep the repo light;
 re-run this script for the print-quality versions.
 """
 from __future__ import annotations
@@ -72,7 +72,7 @@ def render_body_variants(body: str, variants, size: int = 1024) -> Path:
 
     for ax, entry in zip(axes, variants):
         ambient = 1.0 if body == "Sun" else 0.05
-        sd = None if body in {"Sun", "bw"} else sun
+        sd = None if body in {"Sun", "Bw"} else sun
         try:
             img = render_disk(get_texture(body, entry["variant"]),
                               view_direction=view, sun_direction=sd,

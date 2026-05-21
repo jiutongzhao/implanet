@@ -192,7 +192,13 @@ def render_disk(
         # Surface normal at a point on the unit sphere equals the point itself.
         cos_i = np.clip(np.einsum("...i,i->...", safe_points, sun), 0.0, 1.0)
         shade = ambient + (1.0 - ambient) * cos_i
-        sampled = sampled * shade[..., None]
+        # Shade colour only — never the alpha channel, or the night side of
+        # an RGBA texture would go semi-transparent (LA = 2ch, RGBA = 4ch
+        # carry alpha as the last channel).
+        if sampled.shape[-1] in (2, 4):
+            sampled[..., :-1] *= shade[..., None]
+        else:
+            sampled = sampled * shade[..., None]
 
     out = np.empty_like(sampled)
     bg = np.asarray(_to_rgb_uint8(background), dtype=np.float64)

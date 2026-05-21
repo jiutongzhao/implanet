@@ -48,6 +48,7 @@ def main() -> int:
         ambient=0.04,
         size=1024,
         margin=1.06,
+        background=(255, 255, 255),     # white off-disk
     )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

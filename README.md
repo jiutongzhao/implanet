@@ -69,7 +69,7 @@ Result — a 600×600 RGB PNG, half-lit Earth with the terminator running
 through the middle:
 
 <p align="center">
-<img src="docs/figures/quickstart/earth_quickstart.png" alt="quick-start earth.png" width="320">
+<img src="figures/quickstart/earth_quickstart.png" alt="quick-start earth.png" width="320">
 </p>
 
 `get_texture(body, variant=None)` picks the body's default map; pass a
@@ -139,18 +139,18 @@ that, so the terminator slices across the right side of the disk.
 A small curated showcase of `implanet` output. Each figure is
 regenerable from a script in `examples/`; the full output trees there
 are git-ignored, only this hand-picked set is committed under
-[`docs/figures/`](docs/figures/).
+[`figures/`](figures/).
 
 <table>
 <tr>
 <td width="50%" align="center">
-<img src="docs/figures/transparent_disks_overview.png" alt="transparent disks overview" width="100%"><br>
+<img src="figures/transparent_disks_overview.png" alt="transparent disks overview" width="100%"><br>
 <sub><b>Every body, one view</b> — every body's default texture as a
 transparent RGBA disk on an exact [-1,1] grid (equator view). Built by
 <code>examples/transparent_disks.py</code>.</sub>
 </td>
 <td width="50%" align="center">
-<img src="docs/figures/earth_dayside_spice.png" alt="earth dayside, SPICE-driven" width="100%"><br>
+<img src="figures/earth_dayside_spice.png" alt="earth dayside, SPICE-driven" width="100%"><br>
 <sub><b>SPICE-driven illumination</b> — fully sunlit Earth at
 <code>2026-04-03T00:27:39 UTC</code> (Pacific facing the Sun);
 sub-solar = sub-observer.
@@ -159,13 +159,13 @@ Built by <code>examples/earth_dayside.py</code>.</sub>
 </tr>
 <tr>
 <td width="50%" align="center">
-<img src="docs/figures/earth_natural_earth3.png" alt="Natural Earth III variant" width="100%"><br>
+<img src="figures/earth_natural_earth3.png" alt="Natural Earth III variant" width="100%"><br>
 <sub><b>Natural Earth III variant</b> — the more vivid Earth texture
 option (<code>get_texture("Earth", "natural_earth3")</code>).
 Built by <code>examples/earth_dayside.py</code>.</sub>
 </td>
 <td width="50%" align="center">
-<img src="docs/figures/reference_daynight.png" alt="synthetic day/night reference" width="100%"><br>
+<img src="figures/reference_daynight.png" alt="synthetic day/night reference" width="100%"><br>
 <sub><b>Synthetic day/night reference</b> — built locally (no download)
 to verify viewing geometry / lighting / sub-solar lookups.
 Built by <code>examples/daynight_reference.py</code>.</sub>
@@ -174,7 +174,7 @@ Built by <code>examples/daynight_reference.py</code>.</sub>
 </table>
 
 A full index (with regenerate commands) lives at
-[`docs/figures/README.md`](docs/figures/README.md).
+[`figures/README.md`](figures/README.md).
 
 ### Texture catalog
 
@@ -183,7 +183,7 @@ orthographic disk per body's default variant, same lighting for all.
 Regenerate with `python examples/texture_gallery.py`.
 
 <p align="center">
-<img src="docs/figures/gallery/texture_gallery.png" alt="texture gallery — every body's default" width="80%">
+<img src="figures/gallery/texture_gallery.png" alt="texture gallery — every body's default" width="80%">
 </p>
 
 ### Per-body variant comparisons
@@ -199,14 +199,14 @@ multi-variant body to `examples/figures_gallery/`).
 <tr>
 <td align="center" width="50%">
 <b>Mercury</b> (3 variants)<br>
-<img src="docs/figures/gallery/variants_mercury.png" alt="Mercury variants" width="100%"><br>
-<sub>Default <code>messenger_bdr_mono</code> (B&W BDR basemap),
-plus the pseudo-color <code>messenger_enhanced_color</code> and the
-Solar System Scope re-processing.</sub>
+<img src="figures/gallery/variants_mercury.png" alt="Mercury variants" width="100%"><br>
+<sub>Default <code>sss</code> (Solar System Scope colour),
+plus the B&W <code>messenger_bdr_mono</code> BDR basemap and the
+pseudo-color <code>messenger_enhanced_color</code>.</sub>
 </td>
 <td align="center" width="50%">
 <b>Venus</b> (2 variants)<br>
-<img src="docs/figures/gallery/variants_venus.png" alt="Venus variants" width="100%"><br>
+<img src="figures/gallery/variants_venus.png" alt="Venus variants" width="100%"><br>
 <sub>Cloud-top UV (<code>sss_atmosphere</code>, default) vs. the
 Magellan SAR surface mosaic (<code>sss_surface</code>).</sub>
 </td>
@@ -214,13 +214,13 @@ Magellan SAR surface mosaic (<code>sss_surface</code>).</sub>
 <tr>
 <td align="center" width="50%">
 <b>Earth</b> (6 variants)<br>
-<img src="docs/figures/gallery/variants_earth.png" alt="Earth variants" width="100%"><br>
+<img src="figures/gallery/variants_earth.png" alt="Earth variants" width="100%"><br>
 <sub>Blue Marble at two resolutions, the Solar System Scope cloud /
 day / night composites, and the vivid Natural Earth III.</sub>
 </td>
 <td align="center" width="50%">
 <b>Moon</b> (4 variants)<br>
-<img src="docs/figures/gallery/variants_moon.png" alt="Moon variants" width="100%"><br>
+<img src="figures/gallery/variants_moon.png" alt="Moon variants" width="100%"><br>
 <sub>Clementine UVVIS (default), two LROC color composites, and the
 Solar System Scope re-processing.</sub>
 </td>
@@ -228,19 +228,37 @@ Solar System Scope re-processing.</sub>
 <tr>
 <td align="center" width="50%">
 <b>Mars</b> (2 auto-fetchable variants)<br>
-<img src="docs/figures/gallery/variants_mars.png" alt="Mars variants" width="100%"><br>
+<img src="figures/gallery/variants_mars.png" alt="Mars variants" width="100%"><br>
 <sub>Solar System Scope (default) vs. the Viking MDIM 2.1 1-km mosaic.
 HRSC / Tianwen-1 are manual-only; the 12-GB Viking full-res is
 skipped by the gallery script.</sub>
 </td>
 <td align="center" width="50%">
 <b>Jupiter</b> (2 variants)<br>
-<img src="docs/figures/gallery/variants_jupiter.png" alt="Jupiter variants" width="100%"><br>
+<img src="figures/gallery/variants_jupiter.png" alt="Jupiter variants" width="100%"><br>
 <sub>Cassini ISS PIA07782 (default) vs. the Solar System Scope
 composite.</sub>
 </td>
 </tr>
 </table>
+
+### Transparent disk views
+
+Ready-to-grab **transparent** RGBA disks — every body from five
+illumination FOVs (`sun`, `antisun`, `terminator`, `north_pole`,
+`south_pole`), on an exact `[-1, 1]` grid with `alpha=0` off-disk. The
+full set (20 bodies × 5 views = 100 PNGs) lives in
+[`figures/disk_views/`](figures/disk_views/) — see its
+[gallery README](figures/disk_views/README.md). Regenerate with
+`python examples/disk_views.py`. Earth, all five views:
+
+<p align="center">
+<img src="figures/disk_views/earth_sun.png" alt="Earth sun" width="15%">
+<img src="figures/disk_views/earth_terminator.png" alt="Earth terminator" width="15%">
+<img src="figures/disk_views/earth_antisun.png" alt="Earth antisun" width="15%">
+<img src="figures/disk_views/earth_north_pole.png" alt="Earth north pole" width="15%">
+<img src="figures/disk_views/earth_south_pole.png" alt="Earth south pole" width="15%">
+</p>
 
 ## Conventions
 
@@ -626,12 +644,108 @@ fig.savefig("earth_flatmap.png", dpi=140, bbox_inches="tight")
 Result:
 
 <p align="center">
-<img src="docs/figures/quickstart/earth_flatmap_terminator.png" alt="flatmap + terminator example" width="640">
+<img src="figures/quickstart/earth_flatmap_terminator.png" alt="flatmap + terminator example" width="640">
 </p>
 
 Pass `rotation_lon_deg=θ` to `render_flatmap` to spin the body under a
 fixed sun — handy for stitching rotation-period animations frame by
 frame.
+
+### Spacecraft flyby geometry (e.g. MESSENGER M1)
+
+`sun_direction` / `view_direction_from_earth` cover Sun- and
+Earth-based vantages. For a **spacecraft** vantage, implanet doesn't add
+any helper — you grab the kernels yourself and use `spiceypy` directly
+to get the view and sun directions, then hand them to `render_disk`.
+
+Download the generic kernels plus the mission trajectory SPK straight
+from NAIF (any tool works; `wget` shown):
+
+```bash
+mkdir -p kernels && cd kernels
+wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls
+wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc
+wget https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp
+wget https://naif.jpl.nasa.gov/pub/naif/pds/data/mess-e_v_h-spice-6-v1.0/messsp_1000/data/spk/msgr_040803_080216_120401.bsp
+cd ..
+```
+
+Then it's pure `spiceypy` for the geometry — the MESSENGER **Mercury
+flyby 1 (M1)** departing crescent at `2008-01-14T20:24:00 UTC`
+(~80 min after closest approach):
+
+```python
+import numpy as np
+import spiceypy
+from PIL import Image, ImageEnhance
+from implanet import render_disk, get_texture
+
+for k in ("naif0012.tls", "pck00011.tpc", "de440s.bsp",
+          "msgr_040803_080216_120401.bsp"):
+    spiceypy.furnsh(f"kernels/{k}")
+
+utc = "2008-01-14T20:24:00"
+et = spiceypy.str2et(utc)
+
+# MESSENGER (NAIF -236) position relative to Mercury (199), in J2000,
+# then rotate into the body-fixed IAU_MERCURY frame. (de440s has no
+# Mercury-centre IAU chain, so rotate explicitly via pxform.)
+pos_j2000, lt = spiceypy.spkpos("-236", et, "J2000", "LT", "199")
+R = spiceypy.pxform("J2000", "IAU_MERCURY", et)
+sc = R @ np.array(pos_j2000)
+view = -sc / np.linalg.norm(sc)                     # camera → planet centre
+
+# Mercury → Sun, same frame.
+sun_j2000, _ = spiceypy.spkpos("SUN", et, "J2000", "LT", "199")
+sun = R @ np.array(sun_j2000)
+sun = sun / np.linalg.norm(sun)
+
+# Mercury's albedo is genuinely low and flat. Apply a gentle
+# contrast + brightness lift to the *texture* (tuned so the rendered
+# disk's mean tone ≈ NASA's mosaic, ~113/255) — render_disk takes the
+# filtered PIL image directly.
+tex = Image.open(get_texture("Mercury", "sss")).convert("RGB")
+tex = ImageEnhance.Contrast(tex).enhance(2.0)
+tex = ImageEnhance.Brightness(tex).enhance(1.7)
+
+img = render_disk(tex, view_direction=view, sun_direction=sun,
+                  size=1024, ambient=0.18)
+# range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
+# departing gibbous (the terminator clips the lower-left limb).
+Image.fromarray(img).save("messenger_m1.png")
+```
+
+Side-by-side with the real flyby — implanet's render (left) vs. NASA's
+published MESSENGER M1 departure mosaic (right):
+
+<table>
+<tr>
+<td align="center" valign="top" width="50%">
+<img src="figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
+<sub><b>implanet render</b> — Mercury <code>sss</code> mosaic with a
+gentle contrast/brightness lift on the texture, tuned to NASA's mean
+tone (~113/255). Geometry at 2008-01-14T20:24 UTC, north-up — so its
+terminator falls on the left.</sub>
+</td>
+<td align="center" valign="top" width="50%">
+<img src="figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
+<sub><b>NASA MESSENGER M1 departure mosaic</b> — contrast-enhanced and
+rolled to NASA's own display frame, so its terminator is on the right.
+<a href="https://svs.gsfc.nasa.gov/30340/">NASA SVS 30340</a>; credit
+NASA/JHU-APL/Carnegie Institution of Washington.</sub>
+</td>
+</tr>
+</table>
+
+Both show the same ~80%-lit departing gibbous, and with the
+high-contrast filter the tones now read similarly. They are still
+**not** pixel-identical: NASA's mosaic is presented in its own
+orientation, so its terminator is on the right while the north-up
+render's is on the left — implanet reproduces the *geometry* (which
+hemisphere, the phase, the terminator), not NASA's exact framing. `render_disk` only ever needs the two body-fixed
+3-vectors; where they come from is up to you. Swap the SPK URL + body +
+NAIF codes for other flybys (Voyager, New Horizons, Galileo, …); browse
+the NAIF PDS archive at <https://naif.jpl.nasa.gov/pub/naif/pds/>.
 
 ## Map sources
 
@@ -727,7 +841,7 @@ python examples/demo.py
 
 All examples write into `examples/<some-output-dir>/` which is
 git-ignored; the committed showcase set lives under
-[`docs/figures/`](docs/figures/).
+[`figures/`](figures/).
 
 ## Attribution & citation
 

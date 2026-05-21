@@ -1,6 +1,7 @@
-"""Generate demo figures from the downloaded NASA maps.
+"""Generate demo figures from NASA maps.
 
-Run after `python scripts/fetch_maps.py`; outputs land in examples/figures/.
+Textures download on first use via get_texture(); outputs land in
+examples/figures/.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from implanet import render_disk
+from implanet import render_disk, get_texture
 
 
 def render_disk_pil(*args, **kwargs) -> Image.Image:
@@ -20,7 +21,6 @@ def render_disk_pil(*args, **kwargs) -> Image.Image:
 
 
 REPO = Path(__file__).resolve().parent.parent
-DATA = REPO / "maps" / "data"
 OUT = REPO / "examples" / "figures"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -150,18 +150,11 @@ def fig_hires(earth: Image.Image, size: int = 1024):
 
 
 def main():
-    earth_path = DATA / "earth_bluemarble_5400x2700.jpg"
-    earth_hires_path = DATA / "earth_land_shallow_topo_8k.tif"
-    moon_path = DATA / "moon_lroc_color_2019_4k.tif"
-
-    if not earth_path.exists() or not moon_path.exists():
-        raise SystemExit(
-            "Missing textures. Run `python scripts/fetch_maps.py` first."
-        )
-
-    earth = Image.open(earth_path).convert("RGB")
-    moon = Image.open(moon_path).convert("RGB")
-    earth_hi = Image.open(earth_hires_path).convert("RGB")
+    # get_texture downloads on first use and returns a local Path,
+    # so this works in a dev checkout or a pip install alike.
+    earth = Image.open(get_texture("Earth", "blue_marble")).convert("RGB")
+    moon = Image.open(get_texture("Moon", "lroc_color_2019")).convert("RGB")
+    earth_hi = Image.open(get_texture("Earth", "blue_marble_8k")).convert("RGB")
 
     print("rendering: earth rotation")
     fig_earth_rotation(earth).save(OUT / "01_earth_rotation.png")

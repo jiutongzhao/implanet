@@ -9,7 +9,7 @@ Writes ``examples/figures_gallery/texture_gallery.png``. Manual-only
 defaults (currently just Titan) are skipped automatically.
 
 Renders at full resolution (size=768, dpi=300). The committed preview
-under ``docs/figures/gallery/`` is downsampled to keep the repo light;
+under ``figures/gallery/`` is downsampled to keep the repo light;
 re-run this script for the print-quality version.
 """
 from __future__ import annotations
@@ -58,7 +58,7 @@ def main(size: int = 768) -> Path:
         # and Venus/sss_surface (SAR pixels already encode reflectance —
         # we use sss_atmosphere as default, so this rarely fires).
         ambient = 1.0 if body == "Sun" else 0.05
-        sd = None if body in {"Sun", "bw"} else sun
+        sd = None if body in {"Sun", "Bw"} else sun
 
         img = render_disk(get_texture(body), view_direction=view,
                           sun_direction=sd, ambient=ambient,

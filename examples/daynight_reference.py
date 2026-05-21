@@ -33,7 +33,7 @@ def _view_from_lon(lon_deg: float):
 
 def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    tex = Image.open(get_texture("bw", "daynight")).convert("RGB")
+    tex = Image.open(get_texture("Bw", "daynight")).convert("RGB")
 
     fig = plt.figure(figsize=(11, 6.6))
     gs = fig.add_gridspec(2, 3, height_ratios=[1.0, 1.15])
