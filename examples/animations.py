@@ -25,7 +25,8 @@ from typing import List, Sequence
 from PIL import Image, ImageDraw, ImageFont
 Image.MAX_IMAGE_PIXELS = None
 
-from implanet import render_disk, sun_direction, view_direction_from_earth
+from implanet import (render_disk, get_texture, sun_direction,
+                      view_direction_from_earth)
 
 
 def render_disk_pil(*args, **kwargs) -> Image.Image:
@@ -34,7 +35,6 @@ def render_disk_pil(*args, **kwargs) -> Image.Image:
 
 
 REPO = Path(__file__).resolve().parent.parent
-DATA = REPO / "maps" / "data"
 OUT = REPO / "examples" / "animations"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -99,7 +99,7 @@ def save_gif(frames: List[Image.Image], path: Path, duration_ms: int = 80) -> No
 
 def anim_earth_rotation(size: int = 360, n_frames: int = 36) -> Path:
     """Camera orbits the equator at 10°/frame; sun fixed in body-fixed frame."""
-    tex = Image.open(DATA / "earth_bluemarble_5400x2700.jpg").convert("RGB")
+    tex = Image.open(get_texture("Earth", "blue_marble")).convert("RGB")
     sun = latlon_sun(15, -20)              # fixed in body-fixed coords
     frames: List[Image.Image] = []
     for i in range(n_frames):
@@ -117,7 +117,7 @@ def anim_earth_rotation(size: int = 360, n_frames: int = 36) -> Path:
 
 def anim_moon_terminator(size: int = 360, n_frames: int = 36) -> Path:
     """Moon held fixed; sun sub-point sweeps 360° in longitude."""
-    tex = Image.open(DATA / "moon_lroc_color_2019_4k.tif").convert("RGB")
+    tex = Image.open(get_texture("Moon", "lroc_color_2019")).convert("RGB")
     frames: List[Image.Image] = []
     for i in range(n_frames):
         sun_lon = (i * 360 / n_frames) - 180
@@ -138,7 +138,7 @@ def anim_earth_seasons(size: int = 360, n_days: int = 365, step_days: int = 10) 
     sampled every `step_days` over one year. Shows the seasonal swing of
     the sub-solar latitude (≈ ±23.4°) and the slight east-west wobble from
     the equation of time."""
-    tex = Image.open(DATA / "earth_bluemarble_5400x2700.jpg").convert("RGB")
+    tex = Image.open(get_texture("Earth", "blue_marble")).convert("RGB")
     base = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
     frames: List[Image.Image] = []
     for d in range(0, n_days, step_days):
@@ -169,7 +169,7 @@ def anim_moon_libration(size: int = 360, n_days: int = 30,
     This is the "Dial-A-Moon" geometry: same as NASA Goddard SVS's daily
     visualization but at user-chosen sampling.
     """
-    tex = Image.open(DATA / "moon_lroc_color_2019_4k.tif").convert("RGB")
+    tex = Image.open(get_texture("Moon", "lroc_color_2019")).convert("RGB")
     base = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     frames: List[Image.Image] = []
     n_steps = int(n_days * 24 / step_hours)

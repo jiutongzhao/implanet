@@ -21,7 +21,6 @@ Run after `python scripts/fetch_maps.py`. Override the epoch via:
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -32,16 +31,15 @@ import matplotlib.pyplot as plt
 from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 
-from implanet import render_flatmap
+from implanet import render_flatmap, get_texture
+from implanet.assets import texture_entries
 from implanet.ephemeris import (
     sun_direction, sub_solar_point, ensure_kernels, known_bodies,
 )
 
 
 REPO = Path(__file__).resolve().parent.parent
-DATA = REPO / "maps" / "data"
 OUT = REPO / "examples" / "figures_flatmap"
-MANIFEST = REPO / "maps" / "manifest.json"
 
 EPOCH_UTC = os.environ.get("EPOCH", "2026-05-14T12:00:00")
 
@@ -62,14 +60,15 @@ AMBIENT = {
 def render_one(entry, out_path: Path) -> bool:
     body = entry["body"]
     variant = entry.get("variant", "primary")
-    fname = entry.get("filename")
-    if not fname:
-        return False
-    path = DATA / fname
-    if not path.exists():
-        return False
     if body not in known_bodies():
         return False   # no SPICE → no real sun, skip
+    # Use only textures already in the cache (dev checkout or pip cache);
+    # don't force downloads from this "render whatever you have" demo.
+    try:
+        path = get_texture(body, entry.get("variant"),
+                           download_if_missing=False)
+    except (FileNotFoundError, ValueError, KeyError):
+        return False
 
     ambient = AMBIENT.get(f"{body}.{variant}", 0.05)
 
@@ -118,12 +117,11 @@ def render_one(entry, out_path: Path) -> bool:
 def main():
     ensure_kernels()
     OUT.mkdir(parents=True, exist_ok=True)
-    data = json.loads(MANIFEST.read_text())
 
     rendered = []
     skipped = []
     print(f"epoch: {EPOCH_UTC}")
-    for entry in data["maps"]:
+    for entry in texture_entries():
         body = entry["body"]
         variant = entry.get("variant", "primary")
         out_path = OUT / f"{body.lower()}_{variant}.png"
