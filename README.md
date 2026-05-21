@@ -677,7 +677,7 @@ flyby 1 (M1)** departing crescent at `2008-01-14T20:24:00 UTC`
 ```python
 import numpy as np
 import spiceypy
-from PIL import Image, ImageEnhance
+from PIL import Image
 from implanet import render_disk, get_texture
 
 for k in ("naif0012.tls", "pck00011.tpc", "de440s.bsp",
@@ -700,16 +700,9 @@ sun_j2000, _ = spiceypy.spkpos("SUN", et, "J2000", "LT", "199")
 sun = R @ np.array(sun_j2000)
 sun = sun / np.linalg.norm(sun)
 
-# Mercury's albedo is genuinely low and flat. Apply a gentle
-# contrast + brightness lift to the *texture* (tuned so the rendered
-# disk's mean tone ≈ NASA's mosaic, ~113/255) — render_disk takes the
-# filtered PIL image directly.
-tex = Image.open(get_texture("Mercury", "sss")).convert("RGB")
-tex = ImageEnhance.Contrast(tex).enhance(2.0)
-tex = ImageEnhance.Brightness(tex).enhance(1.7)
-
-img = render_disk(tex, view_direction=view, sun_direction=sun,
-                  size=1024, ambient=0.18)
+img = render_disk(get_texture("Mercury", "sss"),
+                  view_direction=view, sun_direction=sun,
+                  size=1024, ambient=0.0)
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
 # departing gibbous (the terminator clips the lower-left limb).
 Image.fromarray(img).save("messenger_m1.png")
@@ -722,9 +715,9 @@ published MESSENGER M1 departure mosaic (right):
 <tr>
 <td align="center" valign="top" width="50%">
 <img src="figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
-<sub><b>implanet render</b> — Mercury <code>sss</code> mosaic with a
-gentle contrast/brightness lift on the texture, tuned to NASA's mean
-tone (~113/255). Geometry at 2008-01-14T20:24 UTC, north-up — so its
+<sub><b>implanet render</b> — Mercury <code>sss</code> colour mosaic,
+raw render (no contrast filter), ambient 0 so the shadow side goes
+fully dark. Geometry at 2008-01-14T20:24 UTC, north-up — so its
 terminator falls on the left.</sub>
 </td>
 <td align="center" valign="top" width="50%">
@@ -737,11 +730,11 @@ NASA/JHU-APL/Carnegie Institution of Washington.</sub>
 </tr>
 </table>
 
-Both show the same ~80%-lit departing gibbous, and with the
-high-contrast filter the tones now read similarly. They are still
-**not** pixel-identical: NASA's mosaic is presented in its own
-orientation, so its terminator is on the right while the north-up
-render's is on the left — implanet reproduces the *geometry* (which
+Both show the same ~80%-lit departing gibbous. They are **not**
+pixel-identical: NASA's mosaic is contrast-stretched and presented in
+its own orientation, so its terminator is on the right while the
+north-up raw render's is on the left — implanet reproduces the
+*geometry* (which
 hemisphere, the phase, the terminator), not NASA's exact framing. `render_disk` only ever needs the two body-fixed
 3-vectors; where they come from is up to you. Swap the SPK URL + body +
 NAIF codes for other flybys (Voyager, New Horizons, Galileo, …); browse
