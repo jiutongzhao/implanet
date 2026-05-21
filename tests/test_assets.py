@@ -129,7 +129,7 @@ def test_synthetic_daynight_texture(monkeypatch, tmp_path):
     monkeypatch.setenv("IMPLANET_CACHE", str(tmp_path))
     monkeypatch.delenv("IMPLANET_MAPS", raising=False)
 
-    p = assets.get_texture("Reference", "daynight")
+    p = assets.get_texture("bw", "daynight")
     assert p.exists() and p.parent == tmp_path / "maps"
     arr = np.asarray(Image.open(p))
     h, w, _ = arr.shape
