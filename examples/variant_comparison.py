@@ -52,7 +52,7 @@ def _auto_variants_by_body():
     return {b: vs for b, vs in grouped.items() if len(vs) > 1}
 
 
-def render_body_variants(body: str, variants, size: int = 640) -> Path:
+def render_body_variants(body: str, variants, size: int = 1024) -> Path:
     n = len(variants)
     cols = min(n, 4)
     rows = (n + cols - 1) // cols
@@ -90,7 +90,7 @@ def render_body_variants(body: str, variants, size: int = 640) -> Path:
                  fontsize=11)
     fig.tight_layout()
     dest = OUT / f"variants_{body.lower()}.png"
-    fig.savefig(dest, dpi=200, bbox_inches="tight")
+    fig.savefig(dest, dpi=300, bbox_inches="tight")
     print(f"wrote {dest}  ({body}, {n} variants)")
     return dest
 
