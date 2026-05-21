@@ -42,7 +42,10 @@ def main() -> int:
 
     view = tuple(-float(c) for c in sun)        # sub-observer == sub-solar
     # RGBA texture → render_disk leaves off-disk pixels transparent
-    # (alpha=0), so the saved PNG drops onto any page background.
+    # (alpha=0), so the saved PNG drops onto any page background. Use a
+    # black background colour so the transparent pixels are (0,0,0,0):
+    # a white transparent fill bleeds a bright halo at the limb when the
+    # PNG is downscaled, black does not.
     img = render_disk(
         Image.open(get_texture("Earth")).convert("RGBA"),
         view_direction=view,
@@ -50,6 +53,7 @@ def main() -> int:
         ambient=0.04,
         size=1024,
         margin=1.06,
+        background=(0, 0, 0),
     )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

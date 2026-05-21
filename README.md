@@ -686,11 +686,11 @@ sun = sun / np.linalg.norm(sun)
 # disk's mean tone ≈ NASA's mosaic, ~113/255) — render_disk takes the
 # filtered PIL image directly.
 tex = Image.open(get_texture("Mercury", "sss")).convert("RGB")
-tex = ImageEnhance.Contrast(tex).enhance(1.45)
+tex = ImageEnhance.Contrast(tex).enhance(2.0)
 tex = ImageEnhance.Brightness(tex).enhance(1.7)
 
 img = render_disk(tex, view_direction=view, sun_direction=sun,
-                  size=1024, ambient=0.2)
+                  size=1024, ambient=0.18)
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
 # departing gibbous (the terminator clips the lower-left limb).
 Image.fromarray(img).save("messenger_m1.png")
