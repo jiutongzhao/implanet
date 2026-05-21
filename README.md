@@ -686,8 +686,8 @@ sun = sun / np.linalg.norm(sun)
 # disk's mean tone ≈ NASA's mosaic, ~113/255) — render_disk takes the
 # filtered PIL image directly.
 tex = Image.open(get_texture("Mercury", "sss")).convert("RGB")
-tex = ImageEnhance.Contrast(tex).enhance(1.2)
-tex = ImageEnhance.Brightness(tex).enhance(1.6)
+tex = ImageEnhance.Contrast(tex).enhance(1.45)
+tex = ImageEnhance.Brightness(tex).enhance(1.7)
 
 img = render_disk(tex, view_direction=view, sun_direction=sun,
                   size=1024, ambient=0.2)
