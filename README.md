@@ -653,15 +653,13 @@ cd ..
 ```
 
 Then it's pure `spiceypy` for the geometry — the MESSENGER **Mercury
-flyby 1 (M1)** departing gibbous at `2008-01-14T20:24:00 UTC`
-(~80 min after closest approach), composed into a publication figure
-with the Layer-3 overlays:
+flyby 1 (M1)** departing crescent at `2008-01-14T20:24:00 UTC`
+(~80 min after closest approach):
 
 ```python
 import numpy as np, spiceypy as spice
-import matplotlib.pyplot as plt
-from implanet import (render_disk, get_texture, graticule_segments,
-                      limb_circle, disk_terminator, subobserver_point)
+from PIL import Image
+from implanet import render_disk, get_texture
 
 for k in ("naif0012.tls", "pck00011.tpc", "de440s.bsp",
           "msgr_040803_080216_120401.bsp"):
@@ -676,50 +674,36 @@ et = spice.str2et(utc)
 pos_j2000, lt = spice.spkpos("-236", et, "J2000", "LT", "199")
 R = spice.pxform("J2000", "IAU_MERCURY", et)
 sc = R @ np.array(pos_j2000)
-rng = np.linalg.norm(sc)
-view = -sc / rng                                    # camera → planet centre
+view = -sc / np.linalg.norm(sc)                     # camera → planet centre
 
 # Mercury → Sun, same frame.
 sun_j2000, _ = spice.spkpos("SUN", et, "J2000", "LT", "199")
-sun = R @ np.array(sun_j2000); sun = sun / np.linalg.norm(sun)
+sun = R @ np.array(sun_j2000)
+sun = sun / np.linalg.norm(sun)
 
-margin = 1.08
-img = render_disk(get_texture("Mercury", "messenger_bdr_mono"),  # B&W MDIS BDR
+img = render_disk(get_texture("Mercury", "sss"),    # Solar System Scope colour mosaic
                   view_direction=view, sun_direction=sun,
-                  size=900, margin=margin, ambient=0.08, background="white")
-img = (np.power(img / 255.0, 0.5) * 255).astype("uint8")   # lift Mercury's low albedo
-
-fig, ax = plt.subplots(figsize=(6, 6), dpi=150)
-ax.imshow(img, extent=(-margin, margin, -margin, margin),
-          cmap="gray", vmin=0, vmax=255)
-ax.set_aspect("equal")
-g = graticule_segments(view_direction=view, lat_step_deg=30, lon_step_deg=30)
-for xs, ys in zip(*g["parallels"]): ax.plot(xs, ys, color="0.4", lw=0.6, alpha=0.7)
-for xs, ys in zip(*g["meridians"]): ax.plot(xs, ys, color="0.4", lw=0.6, alpha=0.7)
-ax.plot(*limb_circle(), color="black", lw=1.0)
-for xs, ys in zip(*disk_terminator(view_direction=view, sun_direction=sun)):
-    ax.plot(xs, ys, "--", color="white", lw=1.3)
-ax.plot(0, 0, "+", color="red", ms=10, mew=1.5)            # sub-observer
-so_lat, so_lon = subobserver_point(view_direction=view)
-ax.set_xticks([-1, -0.5, 0, 0.5, 1]); ax.set_yticks([-1, -0.5, 0, 0.5, 1])
-ax.set_xlabel("x [planet radii]"); ax.set_ylabel("y [planet radii]")
-ax.set_title(f"MESSENGER (M1) @ Mercury   {utc} UTC\n"
-             f"sub-s/c ({so_lat:+.1f}°, {so_lon:+.1f}°)   "
-             f"altitude {rng - 2439.7:,.0f} km", fontsize=10)
-fig.savefig("messenger_m1.png", bbox_inches="tight")
+                  size=1024, ambient=0.04)
+# range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
+# departing gibbous (the terminator clips the lower-left limb). The disk
+# looks dark because Mercury's albedo is genuinely low — this is the
+# unprocessed render.
+Image.fromarray(img).save("messenger_m1.png")
 ```
 
-Side-by-side with the real flyby — implanet's figure (left) vs. NASA's
+Side-by-side with the real flyby — implanet's render (left) vs. NASA's
 published MESSENGER M1 departure mosaic (right):
 
 <table>
 <tr>
 <td align="center" width="50%">
 <img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
-<sub><b>implanet figure</b> — Mercury <code>messenger_bdr_mono</code>
-MDIS B&W basemap, north-up, with graticule, day-night terminator
-(white dashed) and sub-observer marker. Brightness-lifted (Mercury's
-albedo is genuinely low); the geometry is unmodified.</sub>
+<sub><b>implanet render</b> — Mercury <code>sss</code> colour mosaic,
+instantaneous geometry at 2008-01-14T20:24 UTC, north-up. Unprocessed
+output — it looks dark because Mercury's albedo is genuinely low
+(NASA's mosaic is heavily contrast-stretched). Its terminator falls on
+the left because the render is north-up, where NASA's mosaic is rolled
+to its own display frame.</sub>
 </td>
 <td align="center" width="50%">
 <img src="docs/figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
@@ -733,9 +717,10 @@ Washington.</sub>
 </table>
 
 Both show the same ~80%-lit departing gibbous. They are **not**
-pixel-identical: NASA's mosaic is contrast-stretched and presented in
-its own orientation, while the figure is north-up at the single
-20:24 UTC instant — implanet reproduces the *geometry* (which
+pixel-identical: NASA's mosaic is grayscale, contrast-stretched and
+presented in its own orientation, while the render uses the colour
+`sss` mosaic (near-grey at Mercury's true albedo), north-up, at the
+single 20:24 UTC instant — implanet reproduces the *geometry* (which
 hemisphere, the phase, the terminator), not NASA's image processing. `render_disk` only ever needs the two body-fixed
 3-vectors; where they come from is up to you. Swap the SPK URL + body +
 NAIF codes for other flybys (Voyager, New Horizons, Galileo, …); browse
