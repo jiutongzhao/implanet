@@ -36,7 +36,7 @@ def _default_entry_for_each_body():
     return seen
 
 
-def main(size: int = 256) -> Path:
+def main(size: int = 512) -> Path:
     bodies = _default_entry_for_each_body()
     n = len(bodies)
     cols = 4
@@ -75,7 +75,7 @@ def main(size: int = 256) -> Path:
                  fontsize=11)
     fig.tight_layout()
     dest = OUT / "texture_gallery.png"
-    fig.savefig(dest, dpi=140, bbox_inches="tight")
+    fig.savefig(dest, dpi=200, bbox_inches="tight")
     print(f"wrote {dest}  ({n} panels)")
     return dest
 
