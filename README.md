@@ -633,6 +633,61 @@ Pass `rotation_lon_deg=θ` to `render_flatmap` to spin the body under a
 fixed sun — handy for stitching rotation-period animations frame by
 frame.
 
+### Spacecraft flyby geometry (e.g. MESSENGER M1)
+
+`sun_direction` / `view_direction_from_earth` cover Sun- and
+Earth-based vantages. For a **spacecraft** vantage you drop to
+`spiceypy` directly: load a mission trajectory kernel (the registry
+fetches it for you via `get_kernel`), ask SPICE where the spacecraft
+sits relative to the body, rotate that into the body-fixed frame, and
+feed the result to `render_disk`.
+
+Here's the MESSENGER **Mercury flyby 1 (M1)** departing crescent, at
+`2008-01-14T20:24:00 UTC` (~80 min after closest approach):
+
+```python
+import numpy as np, spiceypy as spice
+from PIL import Image
+from implanet import render_disk, get_texture, load_kernels
+from implanet.assets import get_kernel
+
+load_kernels()                                      # generic lsk/pck/de440s
+spice.furnsh(str(get_kernel("messenger_cruise")))   # MESSENGER SPK (auto-downloaded)
+
+utc = "2008-01-14T20:24:00"
+et = spice.str2et(utc)
+
+# MESSENGER (NAIF -236) position relative to Mercury (199), in J2000,
+# then rotate into the body-fixed IAU_MERCURY frame. (de440s has no
+# Mercury-centre IAU chain, so rotate explicitly via pxform — the same
+# trick implanet.ephemeris uses.)
+pos_j2000, lt = spice.spkpos("-236", et, "J2000", "LT", "199")
+R = spice.pxform("J2000", "IAU_MERCURY", et)
+sc = R @ np.array(pos_j2000)
+view = -sc / np.linalg.norm(sc)                     # camera → planet centre
+
+# Mercury → Sun, same frame.
+sun_j2000, _ = spice.spkpos("SUN", et, "J2000", "LT", "199")
+sun = R @ np.array(sun_j2000)
+sun = sun / np.linalg.norm(sun)
+
+img = render_disk(get_texture("Mercury"),           # B&W MDIS BDR default
+                  view_direction=view, sun_direction=sun,
+                  size=512, ambient=0.03)
+Image.fromarray(img).save("messenger_m1.png")
+# range ≈ 29 000 km; sub-observer sits ~133° from the sub-solar point,
+# so most of the disk is in shadow with a thin sunlit limb.
+```
+
+To make a **side-by-side comparison**, drop the render next to the
+actual MESSENGER M1 image for that epoch (e.g. from the
+[NASA/JPL Photojournal](https://photojournal.jpl.nasa.gov/)) in your
+own `matplotlib` figure — implanet renders the geometry; it doesn't
+fetch mission press images. Swap the kernel id + body + NAIF codes for
+other flybys (Voyager, New Horizons, Galileo, …); the kernel registry
+lists what's available (`implanet-fetch` is maps-only, but
+`implanet.assets.kernel_entries()` enumerates the SPK catalogue).
+
 ## Map sources
 
 `maps/manifest.json` catalogs equirectangular maps from NASA, ESA, JAXA,
