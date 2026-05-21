@@ -27,7 +27,7 @@ That single install pulls in numpy, Pillow, spiceypy *and* matplotlib,
 so rendering, SPICE ephemerides, and the figure layer all work out of
 the box. (Developing the package: `pip install -e .[test]` adds pytest.)
 
-Python ≥ 3.9. One console script is installed:
+Python ≥ 3.8. One console script is installed:
 
 ```bash
 implanet-fetch [--list|--cite|--body …]      # bulk-download / inspect maps
