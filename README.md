@@ -658,7 +658,7 @@ flyby 1 (M1)** departing crescent at `2008-01-14T20:24:00 UTC`
 
 ```python
 import numpy as np, spiceypy as spice
-from PIL import Image, ImageOps
+from PIL import Image, ImageEnhance
 from implanet import render_disk, get_texture
 
 for k in ("naif0012.tls", "pck00011.tpc", "de440s.bsp",
@@ -681,14 +681,16 @@ sun_j2000, _ = spice.spkpos("SUN", et, "J2000", "LT", "199")
 sun = R @ np.array(sun_j2000)
 sun = sun / np.linalg.norm(sun)
 
-# Mercury's albedo is genuinely low and flat. Apply a high-contrast
-# filter to the *texture* so the render matches NASA's contrast-stretched
-# mosaic; render_disk takes the filtered PIL image directly.
-tex = ImageOps.autocontrast(
-    Image.open(get_texture("Mercury", "sss")).convert("RGB"), cutoff=1)
+# Mercury's albedo is genuinely low and flat. Apply a gentle
+# contrast + brightness lift to the *texture* (tuned so the rendered
+# disk's mean tone ≈ NASA's mosaic, ~113/255) — render_disk takes the
+# filtered PIL image directly.
+tex = Image.open(get_texture("Mercury", "sss")).convert("RGB")
+tex = ImageEnhance.Contrast(tex).enhance(1.2)
+tex = ImageEnhance.Brightness(tex).enhance(1.6)
 
 img = render_disk(tex, view_direction=view, sun_direction=sun,
-                  size=1024, ambient=0.06)
+                  size=1024, ambient=0.2)
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
 # departing gibbous (the terminator clips the lower-left limb).
 Image.fromarray(img).save("messenger_m1.png")
@@ -702,10 +704,11 @@ published MESSENGER M1 departure mosaic (right):
 <td align="center" width="50%">
 <img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
 <sub><b>implanet render</b> — Mercury <code>sss</code> mosaic with a
-high-contrast filter applied to the texture so its tone matches NASA's
-stretched mosaic. Instantaneous geometry at 2008-01-14T20:24 UTC,
-north-up; the terminator falls on the left because the render is
-north-up, where NASA's mosaic is rolled to its own display frame.</sub>
+gentle contrast/brightness lift on the texture, tuned so the disk's
+mean tone matches NASA's mosaic (~113/255). Instantaneous geometry at
+2008-01-14T20:24 UTC, north-up; the terminator falls on the left
+because the render is north-up, where NASA's mosaic is rolled to its
+own display frame.</sub>
 </td>
 <td align="center" width="50%">
 <img src="docs/figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
