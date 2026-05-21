@@ -681,7 +681,7 @@ sun_j2000, _ = spice.spkpos("SUN", et, "J2000", "LT", "199")
 sun = R @ np.array(sun_j2000)
 sun = sun / np.linalg.norm(sun)
 
-img = render_disk(get_texture("Mercury"),           # default sss colour mosaic
+img = render_disk(get_texture("Mercury", "messenger_bdr_mono"),  # B&W MDIS BDR basemap
                   view_direction=view, sun_direction=sun,
                   size=1024, ambient=0.04)
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
@@ -700,11 +700,10 @@ published MESSENGER M1 departure mosaic (right):
 <tr>
 <td align="center" width="50%">
 <img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
-<sub><b>implanet render</b> — Mercury <code>sss</code> colour mosaic
-(the default), instantaneous geometry at 2008-01-14T20:24 UTC,
+<sub><b>implanet render</b> — Mercury <code>messenger_bdr_mono</code>
+MDIS B&W basemap, instantaneous geometry at 2008-01-14T20:24 UTC,
 north-up. Gamma-stretched for display (Mercury's albedo is genuinely
-low, so the colour reads near-grey); the phase/terminator geometry is
-unmodified.</sub>
+low); the phase/terminator geometry is unmodified.</sub>
 </td>
 <td align="center" width="50%">
 <img src="docs/figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
@@ -718,12 +717,11 @@ Washington.</sub>
 </table>
 
 Both show the same ~80%-lit departing gibbous. They are **not**
-pixel-identical: NASA's mosaic is grayscale and contrast-stretched and
-presented in its own orientation, while the render uses the default
-colour `sss` mosaic (near-grey at Mercury's true albedo), north-up, at
-the single 20:24 UTC instant — implanet reproduces the *geometry*
-(which hemisphere, the phase, the terminator), not NASA's image
-processing. `render_disk` only ever needs the two body-fixed
+pixel-identical: NASA's mosaic is contrast-stretched and presented in
+its own orientation, while the render uses the MDIS B&W BDR basemap
+(`messenger_bdr_mono`) at Mercury's true albedo, north-up, at the
+single 20:24 UTC instant — implanet reproduces the *geometry* (which
+hemisphere, the phase, the terminator), not NASA's image processing. `render_disk` only ever needs the two body-fixed
 3-vectors; where they come from is up to you. Swap the SPK URL + body +
 NAIF codes for other flybys (Voyager, New Horizons, Galileo, …); browse
 the NAIF PDS archive at <https://naif.jpl.nasa.gov/pub/naif/pds/>.
