@@ -182,6 +182,22 @@ def test_sun_shading_darkens_terminator():
     assert dark[64, 64, 0] < 10
 
 
+def test_rgba_shading_preserves_alpha():
+    """Shading must darken RGB but leave the alpha channel intact — a
+    night-side RGBA pixel stays fully opaque on the disk (alpha 255),
+    only its colour goes dark."""
+    tex = np.dstack([np.full((100, 200), 200, np.uint8)] * 3
+                    + [np.full((100, 200), 255, np.uint8)])  # opaque RGBA
+    # View +X, sun -X → centre pixel is on the night side.
+    dark = render_disk(tex, view_direction=(-1, 0, 0),
+                       sun_direction=(-1, 0, 0), ambient=0.0, size=128)
+    assert dark.shape[-1] == 4
+    assert dark[64, 64, 3] == 255          # disk stays opaque
+    assert dark[64, 64, 0] < 10            # but the colour is shaded dark
+    # off-disk corner is transparent
+    assert dark[0, 0, 3] == 0
+
+
 def test_render_accepts_image_path(tmp_path):
     """render_disk / render_flatmap take a file path directly and open
     it via Pillow (decoder from the conventional file type)."""
