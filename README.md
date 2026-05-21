@@ -700,7 +700,7 @@ sun_j2000, _ = spiceypy.spkpos("SUN", et, "J2000", "LT", "199")
 sun = R @ np.array(sun_j2000)
 sun = sun / np.linalg.norm(sun)
 
-img = render_disk(get_texture("Mercury", "messenger_bdr_mono"),
+img = render_disk(get_texture("Mercury", "sss"),
                   view_direction=view, sun_direction=sun,
                   size=1024, ambient=0.0)
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
@@ -715,10 +715,10 @@ published MESSENGER M1 departure mosaic (right):
 <tr>
 <td align="center" valign="top" width="50%">
 <img src="figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
-<sub><b>implanet render</b> — Mercury <code>messenger_bdr_mono</code>
-MDIS B&W basemap, raw render (no contrast filter), ambient 0 so the
-shadow side goes fully dark. Geometry at 2008-01-14T20:24 UTC,
-north-up — so its terminator falls on the left.</sub>
+<sub><b>implanet render</b> — Mercury <code>sss</code> colour mosaic,
+raw render (no contrast filter), ambient 0 so the shadow side goes
+fully dark. Geometry at 2008-01-14T20:24 UTC, north-up — so its
+terminator falls on the left.</sub>
 </td>
 <td align="center" valign="top" width="50%">
 <img src="figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
