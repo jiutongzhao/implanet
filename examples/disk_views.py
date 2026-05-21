@@ -36,10 +36,15 @@ OUT_DIR = Path(__file__).resolve().parent.parent / "docs" / "disk_views"
 EXCLUDE = {"Sun", "Bw"}          # a star and a synthetic test pattern
 SUN = (1.0, 0.0, 0.0)            # sub-solar at lon 0, equator
 AMBIENT = 0.08
-# The antisun view sees only the night hemisphere (cos i = 0 everywhere),
-# so the whole disk renders at the ambient floor — bump it up there so the
-# surface stays readable instead of going near-black.
-AMBIENT_BY_VIEW = {"antisun": 0.30}
+# Per-view ambient overrides:
+#  * sun     — the disk is fully lit, but pure-Lambertian cos falloff
+#              darkens the limb to near-black (a real full-phase body
+#              looks flatter). Lift it so limb darkening is gentle.
+#  * antisun — sees only the night hemisphere (cos i = 0 everywhere), so
+#              the whole disk renders at the floor; lift it to stay readable.
+# terminator / north_pole / south_pole keep the low default so their
+# day-night contrast stays crisp.
+AMBIENT_BY_VIEW = {"sun": 0.50, "antisun": 0.30}
 SIZE = 512
 MAX_TEX = 4096                   # downsample huge source maps (memory)
 
@@ -134,9 +139,10 @@ def _write_readme(done: list[str], skipped: list[str]) -> None:
         "(`alpha = 0`); the image spans exactly `x, y in [-1, 1]` "
         "(disk inscribed, row 0 = `y = +1`). Grab any file directly.\n\n"
         "Sun fixed at +X (sub-solar at lon 0, equator); Lambertian-shaded, "
-        f"ambient {AMBIENT} (the `antisun` view uses "
-        f"{AMBIENT_BY_VIEW['antisun']} so the night hemisphere stays "
-        "readable).\n\n"
+        f"ambient {AMBIENT} for terminator/pole views, "
+        f"{AMBIENT_BY_VIEW['sun']} for `sun` (gentle limb darkening on the "
+        f"fully-lit disk) and {AMBIENT_BY_VIEW['antisun']} for `antisun` "
+        "(readable night side).\n\n"
         "| view | camera | shows |\n"
         "|---|---|---|\n"
         "| `sun` | Sun→body line | fully-lit dayside |\n"
