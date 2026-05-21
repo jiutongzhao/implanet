@@ -701,22 +701,19 @@ published MESSENGER M1 departure mosaic (right):
 
 <table>
 <tr>
-<td align="center" width="50%">
+<td align="center" valign="top" width="50%">
 <img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
 <sub><b>implanet render</b> — Mercury <code>sss</code> mosaic with a
-gentle contrast/brightness lift on the texture, tuned so the disk's
-mean tone matches NASA's mosaic (~113/255). Instantaneous geometry at
-2008-01-14T20:24 UTC, north-up; the terminator falls on the left
-because the render is north-up, where NASA's mosaic is rolled to its
-own display frame.</sub>
+gentle contrast/brightness lift on the texture, tuned to NASA's mean
+tone (~113/255). Geometry at 2008-01-14T20:24 UTC, north-up — so its
+terminator falls on the left.</sub>
 </td>
-<td align="center" width="50%">
+<td align="center" valign="top" width="50%">
 <img src="docs/figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
-<sub><b>NASA MESSENGER M1 departure mosaic</b> — contrast-enhanced,
-assembled/oriented in NASA's own frame.
-<a href="https://svs.gsfc.nasa.gov/30340/">NASA SVS 30340</a>.
-Credit: NASA/Johns Hopkins University APL/Carnegie Institution of
-Washington.</sub>
+<sub><b>NASA MESSENGER M1 departure mosaic</b> — contrast-enhanced and
+rolled to NASA's own display frame, so its terminator is on the right.
+<a href="https://svs.gsfc.nasa.gov/30340/">NASA SVS 30340</a>; credit
+NASA/JHU-APL/Carnegie Institution of Washington.</sub>
 </td>
 </tr>
 </table>

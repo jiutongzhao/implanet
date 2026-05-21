@@ -41,8 +41,10 @@ def main() -> int:
         return 1
 
     view = tuple(-float(c) for c in sun)        # sub-observer == sub-solar
+    # RGBA texture → render_disk leaves off-disk pixels transparent
+    # (alpha=0), so the saved PNG drops onto any page background.
     img = render_disk(
-        Image.open(get_texture("Earth")).convert("RGB"),
+        Image.open(get_texture("Earth")).convert("RGBA"),
         view_direction=view,
         sun_direction=sun,
         ambient=0.04,
@@ -51,7 +53,7 @@ def main() -> int:
     )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(img).save(OUT)
+    Image.fromarray(img, "RGBA").save(OUT)
     print(f"wrote {OUT}  (sub-solar {ss_lat:+.2f}°, {ss_lon:+.2f}°E, "
           f"{UTC} UTC)")
     return 0
