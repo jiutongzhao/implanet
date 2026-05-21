@@ -702,8 +702,10 @@ published MESSENGER M1 departure mosaic (right):
 <img src="docs/figures/flyby/messenger_m1_render.png" alt="implanet render of MESSENGER M1" width="100%"><br>
 <sub><b>implanet render</b> — Mercury <code>messenger_bdr_mono</code>
 MDIS B&W basemap, instantaneous geometry at 2008-01-14T20:24 UTC,
-north-up. Gamma-stretched for display (Mercury's albedo is genuinely
-low); the phase/terminator geometry is unmodified.</sub>
+north-up. Gamma + contrast-enhanced for display (Mercury's albedo is
+genuinely low and flat); the phase/terminator geometry is unmodified.
+Its terminator falls on the left because the render is north-up, where
+NASA's mosaic is rolled to its own display frame.</sub>
 </td>
 <td align="center" width="50%">
 <img src="docs/figures/flyby/messenger_m1_nasa.jpg" alt="NASA MESSENGER M1 departure mosaic" width="100%"><br>
