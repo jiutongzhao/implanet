@@ -702,7 +702,7 @@ sun = sun / np.linalg.norm(sun)
 
 img = render_disk(get_texture("Mercury", "sss"),
                   view_direction=view, sun_direction=sun,
-                  size=1024, ambient=0.0)
+                  size=1024, ambient=0.0, background="black")
 # range ≈ 29 000 km; phase angle ≈ 52°, so MESSENGER saw an ~80%-lit
 # departing gibbous (the terminator clips the lower-left limb).
 Image.fromarray(img).save("messenger_m1.png")
