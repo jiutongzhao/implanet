@@ -2,6 +2,10 @@
 examples/figures*/
 examples/demo_output/
 examples/animations/
+# Editable vector masters of the publication series (regenerate with
+# examples/nature/make_all.py); only the light PNG previews are committed.
+figures/nature/*.pdf
+figures/nature/*.svg
 *.part
 
 # --- Downloaded data (fetch with implanet-fetch and ensure_kernels) ---
