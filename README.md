@@ -48,13 +48,14 @@ kernels; individual textures download as you request them.
 
 ```python
 from PIL import Image
-from implanet import render_disk, get_texture
+from implanet import render_disk
 
-# get_texture downloads (once) and returns a local path. render_disk
-# accepts that path directly — no need to open it yourself.
+# Bare body name → routed through get_texture() (downloads on first
+# use). String view preset → camera on the named axis; "yz" is the
+# classic prime-meridian equator view.
 img = render_disk(
-    get_texture("Earth"),              # str/Path | PIL.Image | ndarray
-    view_direction=(-1, -0.2, -0.3),   # camera → planet center, body-fixed
+    "Earth",                           # body name | path | PIL.Image | ndarray
+    view_direction="yz",               # or a 3-vector like (-1, 0, 0)
     sun_direction=(1, 0.5, 0.4),       # planet → Sun
     size=600,
 )
@@ -63,6 +64,17 @@ Image.fromarray(img).save("earth.png")
 # a small `margin` cushion around it (default 1.05):
 #   ax.imshow(img, extent=(-1.05, 1.05, -1.05, 1.05))
 #   ax.set_aspect("equal")
+```
+
+For an even shorter path to a finished plot, `plot_disk` composes
+`render_disk` with the package overlays (limb, graticule, terminator,
+sub-observer marker) directly into a matplotlib axes:
+
+```python
+from implanet import plot_disk
+fig, ax = plot_disk("Mars", view_direction="yz",
+                    sun_direction=(1, 0.4, 0.2))
+fig.savefig("mars.png", dpi=150, bbox_inches="tight")
 ```
 
 Result — a 600×600 RGB PNG, half-lit Earth with the terminator running
@@ -282,6 +294,22 @@ row 0 = north pole). `lon0` shifts the texture's left edge in radians:
 - `lon0=-π` (default) — texture column 0 sits at lon = −180°
 - `lon0=0` — texture column 0 sits at the prime meridian
 
+`view_direction` accepts string presets (case-insensitive, leading `+`
+optional) in addition to 3-vectors. Each preset positions the camera on
+the named axis with a sensible in-plane `up`, so polar views just work:
+
+| Preset | Camera on | Sub-observer | Same as |
+|---|---|---|---|
+| `"x"`, `"yz"` | +X | lon = 0° (prime meridian) | `view=(-1, 0, 0)` |
+| `"-x"`, `"-yz"` | -X | lon = 180° | `view=(1, 0, 0)` |
+| `"y"`, `"-xz"` | +Y | lon = +90°E | `view=(0, -1, 0)` |
+| `"-y"`, `"xz"` | -Y | lon = -90°E | `view=(0, 1, 0)` |
+| `"z"`, `"xy"` | +Z | north pole | `view=(0, 0, -1)`, `up=(0, 1, 0)` |
+| `"-z"`, `"-xy"` | -Z | south pole | `view=(0, 0, 1)`, `up=(0, 1, 0)` |
+
+Use `implanet.resolve_view(name)` if you want the explicit
+`(view_direction, up)` pair the preset would produce.
+
 ## How rendering works
 
 `render_disk` does orthographic projection of a textured unit sphere
@@ -434,9 +462,10 @@ constant 4 lookups per pixel. A 720×720 render of an 8K texture takes
 
 ```python
 image = render_disk(
-    texture,                       # str/Path | PIL.Image | ndarray (H,W)|(H,W,C)
-    view_direction=(1, 0, 0),
-    up=(0, 0, 1),                  # world-up hint
+    texture,                       # body name | str/Path | PIL.Image | ndarray
+                                   #   "Mars" → routes through get_texture()
+    view_direction=(1, 0, 0),      # 3-vector OR a preset like "yz", "xy", "-z"
+    up=None,                       # None → preset's own up, else (0, 0, 1)
     size=512,                      # int or (h, w)
     margin=1.05,                   # 1.0 = disk touches the shorter edge
     lon0=-math.pi,
@@ -469,18 +498,39 @@ output = render_flatmap(
 
 ```python
 info = render_info(
-    texture, view_direction=(1, 0, 0), up=(0, 0, 1),
+    texture, view_direction=(1, 0, 0), up=None,
     size=512, margin=1.05, lon0=-math.pi,
     sun_direction=None, ambient=0.15,
 )
-# Same signature as render_disk (minus background). Returns a dict:
+# Same signature as render_disk (minus background). Body-name strings
+# and view-direction presets work the same way. Returns a dict:
 #   texture → {body, variant, mission, citation, license, …}
-#             (populated when texture is a path or Image.open()'d PIL
+#             (populated when texture is a body name, a path, or a PIL
 #              image whose filename is catalogued in manifest.json)
 #   camera  → {view_direction, up, sub_observer_lat_deg, …_lon_deg}
 #   sun     → {sun_direction, sub_solar_lat_deg, …, ambient} or None
 #   output  → {size, margin, lon0}
 #   caption → one-line string ready for a figure caption / title
+```
+
+```python
+fig, ax = plot_disk(
+    texture,                       # body name, path, PIL.Image, or ndarray
+    view_direction="yz",           # any 3-vector or preset; defaults to "yz"
+    up=None,                       # preset's up, or (0, 0, 1)
+    sun_direction=None, ambient=0.15,
+    size=512, margin=1.05, lon0=-math.pi,
+    background="white",
+    ax=None, figsize=(5.5, 5.5), dpi=120, title=None,
+    show_graticule=True, graticule_step_deg=30,
+    show_limb=True, show_terminator=True, show_subobserver=True,
+    show_axes=False,               # True → planet-radii ticks like a paper plate
+    # *_kwargs dicts customise each overlay's matplotlib style.
+)
+# Composes render_disk + the overlay drawers (limb, graticule,
+# terminator if sun_direction is given, sub-observer cross) into a
+# matplotlib axes. Returns (fig, ax) — equivalent to writing the
+# imshow + plot calls by hand, but six lines shorter.
 ```
 
 ### Layer 2 — Geometry primitives
@@ -489,6 +539,8 @@ Used internally by `render_disk`, exposed if you need to build your own
 pipeline.
 
 ```python
+resolve_view(view, up=None)                        # preset name or 3-vec
+                                                   #   → (view_direction, up)
 camera_basis(view_direction, up=(0,0,1))           # → (right, up, forward)
 orthographic_rays(size, right, up, forward, margin=1.0)
                                                    # → (HxWx3 points, HxW mask)
