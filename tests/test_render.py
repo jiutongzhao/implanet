@@ -450,10 +450,11 @@ def test_plot_disk_style_axes_force_true_on_passed_axes():
     plt.close(fig)
 
 
-def test_plot_disk_preset_auto_sun_renders_shading():
-    """A bare preset view (no sun_direction passed) still produces a
-    visibly shaded disk — auto-sun kicks in. Explicit `sun_direction="off"`
-    falls back to flat albedo."""
+def test_plot_disk_preset_auto_sun_is_fixed_plus_x():
+    """Auto-sun for every preset is the body-fixed +X direction. Each
+    preset just sees the same lit prime meridian from its own angle:
+    ``"yz"`` is fully lit (sub-solar = sub-observer), ``"y"`` sees a
+    terminator across the middle, ``"-yz"`` is in shadow."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -461,27 +462,49 @@ def test_plot_disk_preset_auto_sun_renders_shading():
 
     tex = np.full((60, 120, 3), 200, dtype=np.uint8)
 
-    # Auto-sun: the rendered disk should show shading (the darkest
-    # interior pixel must be noticeably below the bright base 200).
-    fig, ax = plot_disk(tex, view_direction="yz", size=128,
-                        ambient=0.0, show_subobserver=False,
-                        show_graticule=False, show_limb=False,
-                        show_terminator=False)
-    img = ax.images[0].get_array()
-    disk = np.linalg.norm(np.indices(img.shape[:2]) - 64, axis=0) < 50
-    interior = img[disk]
-    assert interior.min() < 60        # night side fades toward ambient=0
-    assert interior.max() > 190       # day side stays near 200
-    plt.close(fig)
-
-    # sun_direction="off" → flat (no shading), so the lit side dominates
-    fig, ax = plot_disk(tex, view_direction="yz", size=128,
-                        sun_direction="off", ambient=0.0,
+    # "y" preset: camera on +Y, sun on +X → terminator down the centre.
+    # Sample inside a 60-px radius (the disk itself ≈ 61 px at this size).
+    disk = np.linalg.norm(np.indices((128, 128)) - 63.5, axis=0) < 60
+    fig, ax = plot_disk(tex, view_direction="y", size=128, ambient=0.0,
                         show_subobserver=False, show_graticule=False,
                         show_limb=False, show_terminator=False)
     img = ax.images[0].get_array()
     interior = img[disk]
-    assert interior.min() > 190        # uniformly bright
+    assert interior.min() < 30           # night side fades to ambient=0
+    assert interior.max() > 150          # day side is well lit
+    assert interior.max() - interior.min() > 120  # clear terminator gradient
+    plt.close(fig)
+
+    # "yz" preset: camera on +X, sun also on +X → disk centre fully lit.
+    # P_x = sqrt(1 - r²) so brightness falls off toward the limb even
+    # though the visible hemisphere is entirely day-side; sample only
+    # the bright inner cap (r_pix < 30 of a ~61 px disk ⇒ P_x > 0.87).
+    bright_disk = np.linalg.norm(np.indices((128, 128)) - 63.5, axis=0) < 30
+    fig, ax = plot_disk(tex, view_direction="yz", size=128, ambient=0.0,
+                        show_subobserver=False, show_graticule=False,
+                        show_limb=False, show_terminator=False)
+    img = ax.images[0].get_array()
+    interior = img[bright_disk]
+    assert interior.min() > 150     # uniformly bright (limb attenuates)
+    plt.close(fig)
+
+    # "-yz" preset: camera on -X, sun on +X → visible disk in shadow.
+    fig, ax = plot_disk(tex, view_direction="-yz", size=128, ambient=0.0,
+                        show_subobserver=False, show_graticule=False,
+                        show_limb=False, show_terminator=False)
+    img = ax.images[0].get_array()
+    interior = img[bright_disk]
+    assert interior.max() < 30      # fully dark
+    plt.close(fig)
+
+    # sun_direction="off" overrides → flat albedo no matter the preset.
+    fig, ax = plot_disk(tex, view_direction="y", size=128,
+                        sun_direction="off", ambient=0.0,
+                        show_subobserver=False, show_graticule=False,
+                        show_limb=False, show_terminator=False)
+    img = ax.images[0].get_array()
+    interior = img[bright_disk]
+    assert interior.min() > 190
     plt.close(fig)
 
 
