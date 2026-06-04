@@ -9,11 +9,59 @@ from typing import Sequence, Tuple, Union
 import numpy as np
 from PIL import Image
 
-from implanet.projection import camera_basis, orthographic_rays, sphere_to_uv
+from implanet.projection import (
+    camera_basis,
+    orthographic_rays,
+    resolve_view,
+    sphere_to_uv,
+)
 
 
 ArrayLike = Union[np.ndarray, "Image.Image", str, "os.PathLike"]
-Vec3 = Sequence[float]
+Vec3 = Union[Sequence[float], str]
+
+# File suffixes that mark a string as a path (rather than a body name).
+_IMAGE_SUFFIXES = frozenset({
+    ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".gif",
+    ".ppm", ".pgm",
+})
+
+
+def _looks_like_path(s: str) -> bool:
+    """True iff `s` should be treated as a file path, not a body name."""
+    if "/" in s or "\\" in s or s.startswith("~"):
+        return True
+    suffix = Path(s).suffix.lower()
+    return suffix in _IMAGE_SUFFIXES
+
+
+def _open_texture(texture):
+    """Return a PIL.Image (or ndarray) for `texture`.
+
+    Resolution order for a string input:
+      1. existing path on disk
+      2. file-path-looking string (has separator or image suffix) → open
+      3. otherwise treat as a body name and route through ``get_texture``
+    """
+    if isinstance(texture, (str, os.PathLike)):
+        s = os.fspath(texture)
+        p = Path(s)
+        if p.exists():
+            return Image.open(p)
+        if isinstance(texture, os.PathLike) or _looks_like_path(s):
+            # Caller meant a path — propagate the canonical FileNotFoundError.
+            return Image.open(p)
+        # Body name: look it up in the texture registry.
+        try:
+            from implanet.assets import get_texture
+            return Image.open(get_texture(s))
+        except KeyError as exc:
+            raise FileNotFoundError(
+                f"Texture {s!r} is neither an existing file nor a known "
+                f"body name. Pass a path to an equirectangular image, or "
+                f"a body listed by `implanet.show_maps()`."
+            ) from exc
+    return texture
 
 
 def _to_rgb_uint8(color) -> tuple:
@@ -39,10 +87,8 @@ def _to_rgb_uint8(color) -> tuple:
 
 
 def _as_texture_array(texture: ArrayLike) -> np.ndarray:
-    # A path (str / Path) is opened with Pillow, which picks the decoder
-    # from the file's conventional type (.png/.jpg/.tif/...).
-    if isinstance(texture, (str, os.PathLike)):
-        texture = Image.open(texture)
+    # Resolve str → path / body-name, leaving ndarray / PIL.Image alone.
+    texture = _open_texture(texture)
     if isinstance(texture, Image.Image):
         # Renderer handles 1/3/4-channel arrays; coerce palette, CMYK,
         # YCbCr, etc. to RGB so samples are real colours, not indices.
@@ -91,7 +137,7 @@ def _sample_bilinear(texture: np.ndarray, u: np.ndarray, v: np.ndarray) -> np.nd
 def render_disk(
     texture: ArrayLike,
     view_direction: Vec3 = (1.0, 0.0, 0.0),
-    up: Vec3 = (0.0, 0.0, 1.0),
+    up: Vec3 | None = None,
     size: Union[int, Tuple[int, int]] = 512,
     margin: float = 1.05,
     lon0: float = -np.pi,
@@ -116,12 +162,18 @@ def render_disk(
     texture : str, path, ndarray, or PIL.Image
         Equirectangular map. Width spans longitude over 2*pi, height spans
         latitude over pi. Row 0 is the north pole. A str/Path is opened
-        with Pillow (decoder chosen from the file's conventional type).
-    view_direction : 3-vector
+        with Pillow (decoder chosen from the file's conventional type). A
+        bare body name like ``"Mars"`` is looked up in the texture
+        registry — equivalent to ``get_texture("Mars")``.
+    view_direction : 3-vector or preset name
         Direction from the camera toward the planet center, in planet-fixed
-        coordinates. Need not be unit length.
-    up : 3-vector
-        World-space "up" hint. Defaults to the north pole (+Z).
+        coordinates. Need not be unit length. Accepts the preset strings
+        documented in :func:`implanet.projection.resolve_view` — e.g.
+        ``"yz"`` (prime-meridian view), ``"xy"`` (north pole), ``"-y"``
+        (sub-observer at lon=−90°E).
+    up : 3-vector or None
+        World-space "up" hint. ``None`` defaults to the north pole (+Z),
+        except for the polar view presets, which provide their own up.
     size : int or (height, width)
         Output image size. An int produces a square image.
     margin : float
@@ -175,6 +227,7 @@ def render_disk(
     tex = _as_texture_array(texture)
     tex_f = tex.astype(np.float64)
 
+    view_direction, up = resolve_view(view_direction, up)
     right, up_axis, forward = camera_basis(view_direction, up)
     points, mask = orthographic_rays(size, right, up_axis, forward, margin=margin)
 
@@ -221,7 +274,7 @@ def render_disk(
 def render_info(
     texture: ArrayLike | None = None,
     view_direction: Vec3 = (1.0, 0.0, 0.0),
-    up: Vec3 = (0.0, 0.0, 1.0),
+    up: Vec3 | None = None,
     size: Union[int, Tuple[int, int]] = 512,
     margin: float = 1.05,
     lon0: float = -np.pi,
@@ -269,7 +322,16 @@ def render_info(
                     citation=None, license=None, filename=None,
                     resolution=None, portal_url=None)
     fname = None
-    if isinstance(texture, (str, os.PathLike)):
+    if isinstance(texture, str) and not _looks_like_path(texture) and \
+            not Path(texture).exists():
+        # Body name → consult the registry directly for the canonical
+        # filename, so the manifest lookup below finds the entry.
+        try:
+            from implanet.assets._registry import find_texture
+            fname = find_texture(texture).get("filename")
+        except KeyError:
+            fname = None
+    elif isinstance(texture, (str, os.PathLike)):
         fname = Path(texture).name
     elif isinstance(texture, Image.Image):
         fn = getattr(texture, "filename", None)
@@ -298,6 +360,7 @@ def render_info(
             tex_info["filename"] = fname
 
     # --- camera geometry --------------------------------------------------
+    view_direction, up = resolve_view(view_direction, up)
     sub_obs_lat, sub_obs_lon = subobserver_point(view_direction, up)
     cam_info = dict(
         view_direction=tuple(float(c) for c in view_direction),

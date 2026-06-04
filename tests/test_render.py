@@ -285,6 +285,131 @@ def test_render_info_no_sun_omits_sun_block():
     assert "sun" not in info["caption"].lower()
 
 
+def test_resolve_view_presets():
+    """Each preset gives an orthonormal camera and sits the camera on
+    the named (signed) axis: the sub-observer point is exactly -forward
+    and lands on the named axis."""
+    from implanet import resolve_view
+
+    cases = {
+        "x":   (1, 0, 0),       # camera on +X → sub-obs at +X
+        "-x":  (-1, 0, 0),
+        "y":   (0, 1, 0),
+        "-y":  (0, -1, 0),
+        "z":   (0, 0, 1),       # north pole
+        "-z":  (0, 0, -1),
+        "yz":  (1, 0, 0),       # ≡ +X (prime meridian equator view)
+        "xy":  (0, 0, 1),       # ≡ +Z
+        "xz":  (0, 1, 0),       # ≡ +Y
+    }
+    for name, expected_sub_obs in cases.items():
+        view, up = resolve_view(name)
+        r, u, f = camera_basis(view, up)
+        # camera_basis must succeed → preset's up is never parallel to view
+        sub_obs = -f
+        np.testing.assert_allclose(sub_obs, expected_sub_obs, atol=1e-12)
+
+
+def test_resolve_view_accepts_case_and_plus_prefix():
+    from implanet import resolve_view
+
+    for name in ("YZ", "yz", "+YZ", "+yz", "  yz  "):
+        view, up = resolve_view(name)
+        assert tuple(view) == (-1.0, 0.0, 0.0)
+        assert tuple(up) == (0.0, 0.0, 1.0)
+
+
+def test_resolve_view_unknown_preset_raises():
+    from implanet import resolve_view
+    with pytest.raises(ValueError):
+        resolve_view("not_a_preset")
+
+
+def test_resolve_view_explicit_up_wins():
+    from implanet import resolve_view
+    view, up = resolve_view("yz", up=(0, 1, 0))
+    assert tuple(up) == (0, 1, 0)
+
+
+def test_render_disk_accepts_preset_view_string():
+    """``view_direction="yz"`` reproduces the explicit prime-meridian view."""
+    tex = np.zeros((90, 180, 3), dtype=np.uint8)
+    tex[:, 90:] = (200, 30, 30)         # east bright red
+    a = render_disk(tex, view_direction=(-1, 0, 0), size=96)
+    b = render_disk(tex, view_direction="yz", size=96)
+    np.testing.assert_array_equal(a, b)
+
+
+def test_render_disk_polar_preset_picks_inplane_up():
+    """The "z" preset uses an in-plane up — no degeneracy error."""
+    tex = np.full((60, 120, 3), 200, dtype=np.uint8)
+    out = render_disk(tex, view_direction="z", size=64)   # north pole
+    assert out.shape == (64, 64, 3)
+    # disk centre is on the sphere → fully sampled
+    assert int(out[32, 32, 0]) > 150
+
+
+def test_render_disk_accepts_body_name_string(tmp_path, monkeypatch):
+    """A bare body name routes through the texture registry."""
+    from PIL import Image as PILImage
+    calls = []
+    fake_path = tmp_path / "fake_mars.png"
+    PILImage.fromarray(
+        np.full((60, 120, 3), 123, dtype=np.uint8)
+    ).save(fake_path)
+
+    def fake_get_texture(body, variant=None, **kw):
+        calls.append((body, variant))
+        return fake_path
+
+    # Patch the module the renderer actually imports from.
+    import implanet.assets as assets_mod
+    monkeypatch.setattr(assets_mod, "get_texture", fake_get_texture)
+
+    out = render_disk("Mars", view_direction="yz", size=64)
+    assert calls == [("Mars", None)]
+    # All sampled pixels should be the synthetic constant.
+    assert int(out[32, 32, 0]) > 100
+
+
+def test_render_info_resolves_body_name():
+    """render_info("Mars") looks up the registry without opening the file."""
+    info = render_info("Mars", view_direction="yz")
+    assert info["texture"]["body"] == "Mars"
+    assert info["texture"]["citation"]
+
+
+def test_plot_disk_returns_axes_with_image():
+    """plot_disk composes render_disk + overlays into a matplotlib axes."""
+    import matplotlib
+    matplotlib.use("Agg")
+    from implanet import plot_disk
+
+    tex = np.full((60, 120, 3), 180, dtype=np.uint8)
+    fig, ax = plot_disk(tex, view_direction="yz", sun_direction=(1, 0, 0),
+                        size=128)
+    # imshow + overlays = at least one image + several Line2D children
+    assert any(im for im in ax.images)
+    assert len(ax.lines) >= 2     # limb + at least one graticule/terminator/marker
+
+    import matplotlib.pyplot as plt
+    plt.close(fig)
+
+
+def test_plot_disk_polar_preset_no_degeneracy():
+    """North-pole preset must not crash on the camera basis."""
+    import matplotlib
+    matplotlib.use("Agg")
+    from implanet import plot_disk
+
+    tex = np.full((60, 120, 3), 180, dtype=np.uint8)
+    fig, ax = plot_disk(tex, view_direction="xy", size=128,
+                        show_subobserver=False)
+    assert ax.images
+    import matplotlib.pyplot as plt
+    plt.close(fig)
+
+
 def test_render_coerces_palette_image(tmp_path):
     """A palette ('P') PNG is decoded to real RGB, not raw indices."""
     from PIL import Image

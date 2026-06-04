@@ -27,6 +27,72 @@ def _normalize(v: np.ndarray) -> np.ndarray:
     return v / n
 
 
+# Named preset views: ``(view_direction, default_up)`` per name. The
+# camera sits on the named (signed) axis and looks at the origin; ``view``
+# is the camera→planet vector, so for camera on +X it points to -X. The
+# plane-named aliases ("XY", "XZ", "YZ") choose the positive-side camera
+# by convention. See `resolve_view` for the API.
+_VIEW_PRESETS = {
+    # ── single-axis presets (camera on signed axis) ──────────────────
+    "x":   ((-1.0,  0.0,  0.0), (0.0, 0.0, 1.0)),   # camera on +X (sub-obs at prime meridian)
+    "-x":  (( 1.0,  0.0,  0.0), (0.0, 0.0, 1.0)),   # camera on -X (sub-obs at lon=180°)
+    "y":   (( 0.0, -1.0,  0.0), (0.0, 0.0, 1.0)),   # camera on +Y (sub-obs at lon=+90°E)
+    "-y":  (( 0.0,  1.0,  0.0), (0.0, 0.0, 1.0)),   # camera on -Y (sub-obs at lon=-90°E)
+    "z":   (( 0.0,  0.0, -1.0), (0.0, 1.0, 0.0)),   # camera on +Z (north-pole view)
+    "-z":  (( 0.0,  0.0,  1.0), (0.0, 1.0, 0.0)),   # camera on -Z (south-pole view)
+    # ── plane-named aliases ──────────────────────────────────────────
+    "xy":  (( 0.0,  0.0, -1.0), (0.0, 1.0, 0.0)),   # ≡ +Z (top-down on XY plane)
+    "-xy": (( 0.0,  0.0,  1.0), (0.0, 1.0, 0.0)),   # ≡ -Z
+    "xz":  (( 0.0, -1.0,  0.0), (0.0, 0.0, 1.0)),   # ≡ +Y (XZ plane from +Y side)
+    "-xz": (( 0.0,  1.0,  0.0), (0.0, 0.0, 1.0)),   # ≡ -Y
+    "yz":  ((-1.0,  0.0,  0.0), (0.0, 0.0, 1.0)),   # ≡ +X (the classic equator view)
+    "-yz": (( 1.0,  0.0,  0.0), (0.0, 0.0, 1.0)),   # ≡ -X
+}
+
+
+def resolve_view(view, up=None):
+    """Resolve a `view` argument into an explicit ``(view_direction, up)``.
+
+    Accepts either a 3-vector (returned as-is, with ``up`` defaulted to
+    ``(0, 0, 1)`` if None) or one of the preset names:
+
+      ``"x" / "-x" / "y" / "-y" / "z" / "-z"``
+        Camera on the named signed axis, looking at the origin.
+      ``"xy" / "-xy"``
+        Top-down (north pole) / bottom-up (south pole) view.
+      ``"xz" / "-xz"``
+        Side view of the XZ plane from the +Y / -Y side.
+      ``"yz" / "-yz"``
+        Side view of the YZ plane from the +X / -X side. ``"yz"`` is
+        the classic prime-meridian equator view.
+
+    A leading ``+`` is accepted (``"+xy"`` ≡ ``"xy"``). Names are case-
+    insensitive. If ``up`` is None and ``view`` is a preset, the preset's
+    own up vector is returned (necessary for polar presets where the
+    default ``(0, 0, 1)`` would be parallel to the forward axis). An
+    explicit ``up`` always wins.
+
+    Examples
+    --------
+        >>> resolve_view("YZ")              # classic equator, lon=0 centre
+        ((-1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+        >>> resolve_view("z")               # north-pole view
+        ((0.0, 0.0, -1.0), (0.0, 1.0, 0.0))
+        >>> resolve_view((1, 0, 0))         # 3-vector passes through
+        ((1, 0, 0), (0.0, 0.0, 1.0))
+    """
+    if isinstance(view, str):
+        key = view.strip().lower().lstrip("+")
+        if key not in _VIEW_PRESETS:
+            raise ValueError(
+                f"Unknown view preset {view!r}. Known presets: "
+                + ", ".join(sorted(_VIEW_PRESETS))
+            )
+        vd, default_up = _VIEW_PRESETS[key]
+        return vd, (tuple(up) if up is not None else default_up)
+    return view, ((0.0, 0.0, 1.0) if up is None else up)
+
+
 def camera_basis(view_direction, up=(0.0, 0.0, 1.0)):
     """Build an orthonormal camera basis (right, up, forward).
 
