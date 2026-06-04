@@ -56,6 +56,7 @@ def plot_disk(
     show_subobserver: bool = True,
     subobserver_kwargs: Optional[dict] = None,
     show_axes: bool = False,
+    style_axes: Optional[bool] = None,
 ):
     """Render a planet disk into a matplotlib axes, with optional overlays.
 
@@ -94,7 +95,14 @@ def plot_disk(
         Per-overlay matplotlib kwargs (merged over the defaults).
     show_axes : bool
         Show planet-radii tick axes (``True``) or a clean image plate
-        (``False``, the default).
+        (``False``, the default). Only consulted when ``style_axes`` is
+        truthy (i.e. when this call owns the axes styling).
+    style_axes : bool or None
+        Whether to set axes limits / aspect / ticks / spines. ``None``
+        (the default) means "yes if we created the axes, no if the
+        caller passed their own". Set ``True`` / ``False`` to force.
+        When ``False``, only the disk image and the overlays are drawn;
+        every other axes property is left exactly as you configured it.
 
     Examples
     --------
@@ -128,8 +136,21 @@ def plot_disk(
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        owns_axes = True
     else:
         fig = ax.figure
+        owns_axes = False
+    if style_axes is None:
+        style_axes = owns_axes
+
+    if not style_axes:
+        # Caller owns the styling — snapshot everything imshow / plot
+        # would otherwise autoscale or override, and restore it at the
+        # end.
+        saved_xlim = ax.get_xlim()
+        saved_ylim = ax.get_ylim()
+        saved_aspect = ax.get_aspect()
+        saved_autoscale = (ax.get_autoscalex_on(), ax.get_autoscaley_on())
 
     extent = (-margin, margin, -margin, margin)
     cmap = "gray" if img.ndim == 2 else None
@@ -168,23 +189,29 @@ def plot_disk(
         sk.update(subobserver_kwargs or {})
         ax.plot([0], [0], **sk)
 
-    ax.set_xlim(-margin, margin)
-    ax.set_ylim(-margin, margin)
-    ax.set_aspect("equal")
-
-    if show_axes:
-        ticks = np.arange(-1.0, 1.0001, 0.5)
-        ax.set_xticks(ticks)
-        ax.set_yticks(ticks)
-        ax.set_xticklabels([f"{t:+.1f}" for t in ticks])
-        ax.set_yticklabels([f"{t:+.1f}" for t in ticks])
-        ax.set_xlabel("x  [planet radii]")
-        ax.set_ylabel("y  [planet radii]")
+    if style_axes:
+        ax.set_xlim(-margin, margin)
+        ax.set_ylim(-margin, margin)
+        ax.set_aspect("equal")
+        if show_axes:
+            ticks = np.arange(-1.0, 1.0001, 0.5)
+            ax.set_xticks(ticks)
+            ax.set_yticks(ticks)
+            ax.set_xticklabels([f"{t:+.1f}" for t in ticks])
+            ax.set_yticklabels([f"{t:+.1f}" for t in ticks])
+            ax.set_xlabel("x  [planet radii]")
+            ax.set_ylabel("y  [planet radii]")
+        else:
+            ax.set_xticks([])
+            ax.set_yticks([])
+            for s in ax.spines.values():
+                s.set_visible(False)
     else:
-        ax.set_xticks([])
-        ax.set_yticks([])
-        for s in ax.spines.values():
-            s.set_visible(False)
+        ax.set_xlim(saved_xlim)
+        ax.set_ylim(saved_ylim)
+        ax.set_aspect(saved_aspect)
+        ax.set_autoscalex_on(saved_autoscale[0])
+        ax.set_autoscaley_on(saved_autoscale[1])
 
     if title is not None:
         ax.set_title(title)

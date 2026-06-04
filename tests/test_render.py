@@ -396,6 +396,60 @@ def test_plot_disk_returns_axes_with_image():
     plt.close(fig)
 
 
+def test_plot_disk_preserves_caller_axes_styling():
+    """When `ax` is provided, plot_disk leaves the caller's ticks /
+    labels / limits / aspect / spines alone — only the disk image and
+    the overlay polylines are added."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from implanet import plot_disk
+
+    fig, ax = plt.subplots()
+    ax.set_xlim(-3.0, 3.0)
+    ax.set_ylim(-2.0, 2.0)
+    ax.set_aspect("auto")
+    ax.set_xticks([-2.0, 0.0, 2.0])
+    ax.set_xlabel("custom x")
+    ax.set_ylabel("custom y")
+    spine_states = {k: v.get_visible() for k, v in ax.spines.items()}
+
+    tex = np.full((60, 120, 3), 180, dtype=np.uint8)
+    plot_disk(tex, view_direction="yz", sun_direction=(1, 0, 0),
+              size=64, ax=ax)
+
+    assert ax.get_xlim() == (-3.0, 3.0)
+    assert ax.get_ylim() == (-2.0, 2.0)
+    assert ax.get_aspect() == "auto"
+    assert list(ax.get_xticks()) == [-2.0, 0.0, 2.0]
+    assert ax.get_xlabel() == "custom x"
+    assert ax.get_ylabel() == "custom y"
+    for k, v in spine_states.items():
+        assert ax.spines[k].get_visible() == v
+    # but the disk + overlays did get drawn
+    assert ax.images
+    assert ax.lines
+    plt.close(fig)
+
+
+def test_plot_disk_style_axes_force_true_on_passed_axes():
+    """`style_axes=True` re-applies the disk styling even on a caller-
+    provided axes — for users who want the clean plate look in a
+    sub-axes."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from implanet import plot_disk
+
+    fig, ax = plt.subplots()
+    ax.set_xlim(-3.0, 3.0)
+    tex = np.full((60, 120, 3), 180, dtype=np.uint8)
+    plot_disk(tex, view_direction="yz", size=64, ax=ax, style_axes=True,
+              margin=1.05)
+    assert ax.get_xlim() == (-1.05, 1.05)
+    plt.close(fig)
+
+
 def test_plot_disk_polar_preset_no_degeneracy():
     """North-pole preset must not crash on the camera basis."""
     import matplotlib
