@@ -24,11 +24,27 @@ from implanet.overlays import (
     limb_circle,
     subobserver_point,
 )
-from implanet.projection import resolve_view
+from implanet.projection import camera_basis, resolve_view
 from implanet.render import render_disk
 
 
 Vec3 = Union[Sequence[float], str]
+
+
+def _preset_default_sun(view_direction, up):
+    """A pleasant default Sun direction for a preset view.
+
+    Mostly behind the camera (so the visible hemisphere is lit) but
+    offset roughly 34° to the right and slightly upward in the camera
+    basis. Produces clear gibbous illumination with a curved
+    terminator across the disk for every preset, including the polar
+    ones where the equatorial ``(1, 0, 0)`` default would barely show
+    any shading.
+    """
+    right, up_axis, forward = camera_basis(view_direction, up)
+    sun = -forward + 0.6 * right + 0.3 * up_axis
+    sun = sun / np.linalg.norm(sun)
+    return tuple(float(c) for c in sun)
 
 
 def plot_disk(
@@ -78,8 +94,14 @@ def plot_disk(
     up : 3-vector or None
         Up hint. ``None`` defers to the preset, or ``(0, 0, 1)`` for a
         free 3-vector ``view_direction``.
-    sun_direction : 3-vector or None
-        If given, applies Lambertian shading and draws the terminator.
+    sun_direction : 3-vector, "off", or None
+        Applies Lambertian shading and draws the terminator. The
+        default ``None`` auto-picks a Sun for the preset views (mostly
+        behind the camera, offset to the right and up — clean gibbous
+        illumination) so every built-in viewpoint shows shading out of
+        the box. Pass an explicit 3-vector to override, or ``"off"``
+        to disable shading entirely (flat-albedo render). Auto-Sun is
+        skipped when ``view_direction`` is a 3-vector.
     ambient, size, margin, lon0, background
         Passed through to :func:`render_disk`.
     ax : matplotlib Axes or None
@@ -120,7 +142,20 @@ def plot_disk(
     """
     import matplotlib.pyplot as plt
 
+    preset_used = isinstance(view_direction, str)
     view_direction, up = resolve_view(view_direction, up)
+
+    # Auto-illuminate the preset views so they don't render flat.
+    if sun_direction is None and preset_used:
+        sun_direction = _preset_default_sun(view_direction, up)
+    elif isinstance(sun_direction, str):
+        if sun_direction.lower() in ("off", "none", "flat"):
+            sun_direction = None
+        else:
+            raise ValueError(
+                f"sun_direction string {sun_direction!r} not recognised; "
+                f"use a 3-vector, None for the auto-Sun, or \"off\"."
+            )
 
     img = render_disk(
         texture,

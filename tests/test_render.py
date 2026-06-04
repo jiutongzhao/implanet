@@ -450,6 +450,62 @@ def test_plot_disk_style_axes_force_true_on_passed_axes():
     plt.close(fig)
 
 
+def test_plot_disk_preset_auto_sun_renders_shading():
+    """A bare preset view (no sun_direction passed) still produces a
+    visibly shaded disk — auto-sun kicks in. Explicit `sun_direction="off"`
+    falls back to flat albedo."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from implanet import plot_disk
+
+    tex = np.full((60, 120, 3), 200, dtype=np.uint8)
+
+    # Auto-sun: the rendered disk should show shading (the darkest
+    # interior pixel must be noticeably below the bright base 200).
+    fig, ax = plot_disk(tex, view_direction="yz", size=128,
+                        ambient=0.0, show_subobserver=False,
+                        show_graticule=False, show_limb=False,
+                        show_terminator=False)
+    img = ax.images[0].get_array()
+    disk = np.linalg.norm(np.indices(img.shape[:2]) - 64, axis=0) < 50
+    interior = img[disk]
+    assert interior.min() < 60        # night side fades toward ambient=0
+    assert interior.max() > 190       # day side stays near 200
+    plt.close(fig)
+
+    # sun_direction="off" → flat (no shading), so the lit side dominates
+    fig, ax = plot_disk(tex, view_direction="yz", size=128,
+                        sun_direction="off", ambient=0.0,
+                        show_subobserver=False, show_graticule=False,
+                        show_limb=False, show_terminator=False)
+    img = ax.images[0].get_array()
+    interior = img[disk]
+    assert interior.min() > 190        # uniformly bright
+    plt.close(fig)
+
+
+def test_plot_disk_explicit_view_vector_does_not_inject_sun():
+    """When `view_direction` is a 3-vector the auto-sun is *not*
+    triggered — preserves the prior None == no-shading contract for
+    callers who used to rely on it."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from implanet import plot_disk
+
+    tex = np.full((60, 120, 3), 200, dtype=np.uint8)
+    fig, ax = plot_disk(tex, view_direction=(-1, 0, 0), size=128,
+                        ambient=0.0, show_subobserver=False,
+                        show_graticule=False, show_limb=False,
+                        show_terminator=False)
+    img = ax.images[0].get_array()
+    # No shading applied → whole disk is at the texture's flat 200.
+    disk = np.linalg.norm(np.indices(img.shape[:2]) - 64, axis=0) < 50
+    assert img[disk].min() > 190
+    plt.close(fig)
+
+
 def test_plot_disk_polar_preset_no_degeneracy():
     """North-pole preset must not crash on the camera basis."""
     import matplotlib
