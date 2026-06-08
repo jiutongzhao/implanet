@@ -56,9 +56,16 @@ def test_sphere_to_uv_roundtrip_known_points():
 def test_render_returns_correct_shape_and_dtype():
     tex = np.zeros((100, 200, 3), dtype=np.uint8)
     tex[..., 0] = 200
+    # Default background=None → RGBA output (alpha=0 outside the disk).
     out = render_disk(tex, size=64)
-    assert out.shape == (64, 64, 3)
+    assert out.shape == (64, 64, 4)
     assert out.dtype == np.uint8
+    assert out[0, 0, 3] == 0           # transparent corner
+    assert out[32, 32, 3] == 255       # opaque centre
+
+    # Opting back into an opaque fill returns plain RGB.
+    rgb = render_disk(tex, size=64, background="white")
+    assert rgb.shape == (64, 64, 3)
 
 
 def test_render_background_outside_disk():
@@ -344,7 +351,7 @@ def test_render_disk_polar_preset_picks_inplane_up():
     """The "z" preset uses an in-plane up — no degeneracy error."""
     tex = np.full((60, 120, 3), 200, dtype=np.uint8)
     out = render_disk(tex, view_direction="z", size=64)   # north pole
-    assert out.shape == (64, 64, 3)
+    assert out.shape == (64, 64, 4)   # RGBA from the transparent default
     # disk centre is on the sphere → fully sampled
     assert int(out[32, 32, 0]) > 150
 
@@ -493,7 +500,9 @@ def test_plot_disk_preset_auto_sun_is_fixed_plus_x():
                         show_subobserver=False, show_graticule=False,
                         show_limb=False, show_terminator=False)
     img = ax.images[0].get_array()
-    interior = img[bright_disk]
+    # Default RGBA output: alpha=255 inside the disk; slice it off and
+    # check the colour channels are dark.
+    interior = img[bright_disk][..., :3]
     assert interior.max() < 30      # fully dark
     plt.close(fig)
 
@@ -554,5 +563,7 @@ def test_render_coerces_palette_image(tmp_path):
 
     img = render_disk(p, view_direction=(-1, 0, 0),
                             up=(0, 1, 0), size=64)
-    assert img.ndim == 3 and img.shape[-1] == 3   # RGB, not index plane
+    # 4 here = RGBA from the transparent default; 3 if a caller opts
+    # into an opaque background. Either way, not the 1-channel palette.
+    assert img.ndim == 3 and img.shape[-1] in (3, 4)
     assert int(img.max()) > 100                   # real colour values

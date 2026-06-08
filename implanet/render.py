@@ -143,7 +143,7 @@ def render_disk(
     lon0: float = -np.pi,
     sun_direction: Vec3 | None = None,
     ambient: float = 0.15,
-    background: Sequence[int] = (255, 255, 255),
+    background: Sequence[int] | str | None = None,
 ):
     """Render an equirectangular planet map as viewed from `view_direction`.
 
@@ -153,7 +153,9 @@ def render_disk(
         Rendered disk, shape (H, W) for grayscale or (H, W, C) for color.
         Row 0 is the top of the image (image-space convention). The disk
         occupies ``[-1, +1]`` planet radii on both axes; off-disk pixels
-        are filled with `background` (or transparent for RGBA textures).
+        are transparent by default — the output is RGBA with alpha=0
+        outside the disk and alpha=255 inside. Pass an opaque
+        `background` to fill the corners instead.
         To plot with `matplotlib.imshow`, use
         ``extent=(-margin, +margin, -margin, +margin)``.
 
@@ -187,12 +189,15 @@ def render_disk(
         planet TOWARD the sun (in planet-fixed coordinates).
     ambient : float
         Ambient light term in [0, 1] used when `sun_direction` is set.
-    background : 3-tuple of uint8 *or* color string
-        Fill for pixels outside the planet disk. Either an
-        ``(r, g, b)`` triple in [0, 255] (e.g. ``(0, 0, 0)``) or any
-        matplotlib color string — a named color (``"white"``,
-        ``"tab:orange"``), a hex code (``"#1f77b4"``, ``"#f00"``), or a
-        greyscale level (``"0.25"``).
+    background : None, 3-tuple of uint8, or color string
+        Fill for pixels outside the planet disk. The default ``None``
+        (or the strings ``"transparent"`` / ``"none"``) makes the
+        off-disk region fully transparent — the output is RGBA with
+        alpha=0 outside and alpha=255 inside the disk regardless of
+        whether the input texture had an alpha channel. Pass an
+        ``(r, g, b)`` triple in [0, 255] or any matplotlib color
+        string (``"white"``, ``"#1f77b4"``, ``"0.25"``) for an opaque
+        fill.
 
     Examples
     --------
@@ -252,6 +257,33 @@ def render_disk(
             sampled[..., :-1] *= shade[..., None]
         else:
             sampled = sampled * shade[..., None]
+
+    transparent = background is None or (
+        isinstance(background, str)
+        and background.strip().lower() in ("transparent", "none")
+    )
+
+    if transparent:
+        # Promote to RGBA: keep texture RGB inside the disk, fade alpha
+        # to 0 outside. If the texture already carried alpha, preserve
+        # it inside the disk.
+        c = sampled.shape[-1]
+        if c == 1:
+            rgb = np.broadcast_to(sampled, sampled.shape[:-1] + (3,))
+            tex_alpha = np.full(sampled.shape[:-1] + (1,), 255.0)
+        elif c == 2:  # LA
+            rgb = np.broadcast_to(sampled[..., :1], sampled.shape[:-1] + (3,))
+            tex_alpha = sampled[..., 1:2]
+        elif c == 3:
+            rgb = sampled
+            tex_alpha = np.full(sampled.shape[:-1] + (1,), 255.0)
+        else:  # RGBA (or more)
+            rgb = sampled[..., :3]
+            tex_alpha = sampled[..., 3:4]
+        alpha = np.where(mask[..., None], tex_alpha, 0.0)
+        out = np.concatenate([rgb, alpha], axis=-1)
+        out = np.clip(out, 0.0, 255.0).astype(np.uint8)
+        return out
 
     out = np.empty_like(sampled)
     bg = np.asarray(_to_rgb_uint8(background), dtype=np.float64)

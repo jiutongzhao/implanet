@@ -48,7 +48,7 @@ def plot_disk(
     size: int = 512,
     margin: float = 1.05,
     lon0: float = -np.pi,
-    background="white",
+    background=None,
     *,
     ax=None,
     figsize: Tuple[float, float] = (5.5, 5.5),
