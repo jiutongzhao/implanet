@@ -532,7 +532,7 @@ fig, ax = plot_disk(
     ax=None,                       # pass your own pre-styled axes for
                                    #   size / DPI / title control
     show_graticule=True, graticule_step_deg=30,
-    show_limb=True, show_terminator=True, show_subobserver=True,
+    show_limb=True, show_terminator=True, show_subobserver=False,
     # *_kwargs dicts customise each overlay's matplotlib style.
 )
 # Composes render_disk + the overlay drawers (limb, graticule,

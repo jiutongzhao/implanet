@@ -58,7 +58,7 @@ def plot_disk(
     limb_kwargs: Optional[dict] = None,
     show_terminator: bool = True,
     terminator_kwargs: Optional[dict] = None,
-    show_subobserver: bool = True,
+    show_subobserver: bool = False,
     subobserver_kwargs: Optional[dict] = None,
     style_axes: Optional[bool] = None,
 ):
