@@ -391,8 +391,10 @@ Output image pixels (px, py) map to normalized image-plane coordinates
     u = (px − cx) / R           v = −(py − cy) / R
 
 where R is the disk radius in pixels (`min(H, W) / 2 / margin`).
-Pixels with u² + v² > 1 fall outside the disk and are filled with
-`background`. For the rest, the point on the *near* hemisphere of the
+Pixels with u² + v² > 1 fall outside the disk; by default they're
+**transparent** (the output is RGBA with alpha = 0 outside, 255
+inside), or filled with `background` if you pass an opaque colour.
+For the rest, the point on the *near* hemisphere of the
 unit sphere is
 
     z = √(1 − u² − v²)
@@ -444,10 +446,12 @@ like Venus, whose pixel values already encode reflectance).
 
 ### 6.  Compositing
 
-Off-disk pixels are replaced with `background`, the array is clipped
-to [0, 255] and cast to `uint8`. Grayscale, RGB, and RGBA all flow
-through the same path; the output mode is inferred from the input
-channel count.
+Off-disk pixels are made fully transparent by default — the output is
+promoted to RGBA with `alpha = 0` outside the disk and `alpha = 255`
+inside, regardless of the input texture's channel count. Pass an
+explicit `background` (RGB tuple or matplotlib colour string) to opt
+back into an opaque fill, in which case the output keeps the input's
+channel layout. The array is clipped to [0, 255] and cast to `uint8`.
 
 ### Cost
 
@@ -471,10 +475,14 @@ image = render_disk(
     lon0=-math.pi,
     sun_direction=None,            # None → flat albedo (no shading)
     ambient=0.15,                  # [0, 1]; floor on Lambertian shading
-    background=(255, 255, 255),    # RGB 0-255 *or* a matplotlib color
-                                   #   string: "white", "#1f77b4", "0.25"
+    background=None,               # None → transparent RGBA output
+                                   #   (alpha=0 outside the disk).
+                                   # Pass an RGB tuple 0-255 or a matplotlib
+                                   #   colour string ("white", "#1f77b4",
+                                   #   "0.25") for an opaque fill.
 )
 # image: uint8 ndarray (H, W) or (H, W, C); row 0 = top.
+# Default output is RGBA (C=4) so the corners are transparent.
 # The disk occupies [-1, +1] in planet radii on both axes.
 # → Save: Image.fromarray(image).save(...)
 # → Plot: ax.imshow(image, extent=(-margin, margin, -margin, margin))
@@ -520,7 +528,7 @@ fig, ax = plot_disk(
     up=None,                       # preset's up, or (0, 0, 1)
     sun_direction=None, ambient=0.15,
     size=512, margin=1.05, lon0=-math.pi,
-    background="white",
+    background=None,               # default: transparent corners
     ax=None, figsize=(5.5, 5.5), dpi=120, title=None,
     show_graticule=True, graticule_step_deg=30,
     show_limb=True, show_terminator=True, show_subobserver=True,
