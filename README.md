@@ -66,6 +66,13 @@ Image.fromarray(img).save("earth.png")
 #   ax.set_aspect("equal")
 ```
 
+Result — a 600×600 RGBA PNG, half-lit Earth with the terminator running
+through the middle (transparent corners by default):
+
+<p align="center">
+<img src="figures/quickstart/earth_quickstart.png" alt="quick-start earth.png" width="320">
+</p>
+
 For an even shorter path to a finished plot, `plot_disk` composes
 `render_disk` with the package overlays (limb, graticule, terminator,
 sub-observer marker) directly into a matplotlib axes:
@@ -76,13 +83,6 @@ fig, ax = plot_disk("Mars", view_direction="yz",
                     sun_direction=(1, 0.4, 0.2))
 fig.savefig("mars.png", dpi=150, bbox_inches="tight")
 ```
-
-Result — a 600×600 RGB PNG, half-lit Earth with the terminator running
-through the middle:
-
-<p align="center">
-<img src="figures/quickstart/earth_quickstart.png" alt="quick-start earth.png" width="320">
-</p>
 
 `get_texture(body, variant=None)` picks the body's default map; pass a
 variant for a specific one, e.g. `get_texture("Earth", "natural_earth3")`.
