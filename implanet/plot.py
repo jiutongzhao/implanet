@@ -14,7 +14,7 @@ hand: ``render_disk`` for the raster, then the overlay drawers
 
 from __future__ import annotations
 
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Union
 
 import numpy as np
 
@@ -51,9 +51,6 @@ def plot_disk(
     background=None,
     *,
     ax=None,
-    figsize: Tuple[float, float] = (5.5, 5.5),
-    dpi: int = 120,
-    title: Optional[str] = None,
     show_graticule: bool = True,
     graticule_step_deg: float = 30.0,
     graticule_kwargs: Optional[dict] = None,
@@ -63,7 +60,6 @@ def plot_disk(
     terminator_kwargs: Optional[dict] = None,
     show_subobserver: bool = True,
     subobserver_kwargs: Optional[dict] = None,
-    show_axes: bool = False,
     style_axes: Optional[bool] = None,
 ):
     """Render a planet disk into a matplotlib axes, with optional overlays.
@@ -97,12 +93,18 @@ def plot_disk(
         explicit 3-vector to override, or ``"off"`` to disable
         shading entirely. Auto-Sun is skipped when ``view_direction``
         is a free 3-vector.
-    ambient, size, margin, lon0, background
+    ambient, size, lon0, background
         Passed through to :func:`render_disk`.
+    margin : float
+        Half-width of the data extent — the disk lives in
+        ``[-1, +1]`` planet radii and ``margin > 1`` leaves a cushion
+        around it for graticule labels or a frame. Drives both the
+        ``render_disk`` raster framing and the ``imshow`` extent so
+        overlays land in the right place.
     ax : matplotlib Axes or None
-        Target axes. ``None`` creates a fresh figure of ``figsize``/``dpi``.
-    title : str or None
-        Optional axes title.
+        Target axes. ``None`` creates a fresh figure with matplotlib's
+        defaults; pass your own pre-styled ``ax`` to control size,
+        DPI, title, ticks, etc.
     show_graticule, show_limb, show_terminator, show_subobserver : bool
         Toggle each overlay. The terminator is only drawn when
         ``sun_direction`` is also given.
@@ -110,10 +112,6 @@ def plot_disk(
         Lat/lon step for the graticule.
     *_kwargs : dict or None
         Per-overlay matplotlib kwargs (merged over the defaults).
-    show_axes : bool
-        Show planet-radii tick axes (``True``) or a clean image plate
-        (``False``, the default). Only consulted when ``style_axes`` is
-        truthy (i.e. when this call owns the axes styling).
     style_axes : bool or None
         Whether to set axes limits / aspect / ticks / spines. ``None``
         (the default) means "yes if we created the axes, no if the
@@ -130,10 +128,13 @@ def plot_disk(
                             sun_direction=(1, 0.4, 0.2))
         fig.savefig("mars.png", dpi=150, bbox_inches="tight")
 
-    North-pole view of Earth — the preset picks an in-plane ``up``::
+    Use your own figure if you want a specific size / DPI / title::
 
-        fig, ax = plot_disk("Earth", view_direction="xy",
-                            sun_direction=(1, 0, 0.4))
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(figsize=(6, 6), dpi=150)
+        plot_disk("Earth", view_direction="xy",
+                  sun_direction=(1, 0, 0.4), ax=ax)
+        ax.set_title("Earth — north pole")
     """
     import matplotlib.pyplot as plt
 
@@ -165,7 +166,7 @@ def plot_disk(
     )
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        fig, ax = plt.subplots()
         owns_axes = True
     else:
         fig = ax.figure
@@ -223,27 +224,15 @@ def plot_disk(
         ax.set_xlim(-margin, margin)
         ax.set_ylim(-margin, margin)
         ax.set_aspect("equal")
-        if show_axes:
-            ticks = np.arange(-1.0, 1.0001, 0.5)
-            ax.set_xticks(ticks)
-            ax.set_yticks(ticks)
-            ax.set_xticklabels([f"{t:+.1f}" for t in ticks])
-            ax.set_yticklabels([f"{t:+.1f}" for t in ticks])
-            ax.set_xlabel("x  [planet radii]")
-            ax.set_ylabel("y  [planet radii]")
-        else:
-            ax.set_xticks([])
-            ax.set_yticks([])
-            for s in ax.spines.values():
-                s.set_visible(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for s in ax.spines.values():
+            s.set_visible(False)
     else:
         ax.set_xlim(saved_xlim)
         ax.set_ylim(saved_ylim)
         ax.set_aspect(saved_aspect)
         ax.set_autoscalex_on(saved_autoscale[0])
         ax.set_autoscaley_on(saved_autoscale[1])
-
-    if title is not None:
-        ax.set_title(title)
 
     return fig, ax

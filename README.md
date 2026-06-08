@@ -529,10 +529,10 @@ fig, ax = plot_disk(
     sun_direction=None, ambient=0.15,
     size=512, margin=1.05, lon0=-math.pi,
     background=None,               # default: transparent corners
-    ax=None, figsize=(5.5, 5.5), dpi=120, title=None,
+    ax=None,                       # pass your own pre-styled axes for
+                                   #   size / DPI / title control
     show_graticule=True, graticule_step_deg=30,
     show_limb=True, show_terminator=True, show_subobserver=True,
-    show_axes=False,               # True → planet-radii ticks like a paper plate
     # *_kwargs dicts customise each overlay's matplotlib style.
 )
 # Composes render_disk + the overlay drawers (limb, graticule,
