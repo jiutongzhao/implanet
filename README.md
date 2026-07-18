@@ -146,6 +146,40 @@ point at (−24.6°, −160.2°) on that date; the camera is 30° west of
 that, so the terminator slices across the right side of the disk.
 
 
+## Camera distance (perspective)
+
+By default the camera sits at infinity — an **orthographic** projection,
+so the disk is a true hemisphere at any framing. Pass `distance` (in
+planet radii, `> 1`) to move the camera to a finite range and switch to a
+**perspective** projection: a nearer camera sees a *smaller* visible cap
+(angular radius `arccos(1/distance)`) with stronger foreshortening toward
+the limb — the close-up "you're right above it" look.
+
+```python
+from implanet import render_disk
+
+render_disk("Earth", view_direction="yz", sun_direction=(1, 0.35, 0.45),
+            distance=3.0)          # camera 3 planet radii out
+```
+
+Framing is **silhouette-normalized**: the apparent disk always fills
+`[-1, +1]`, so `margin`, the `imshow` extent, and every overlay keep the
+same meaning as in the orthographic case — only the surface content
+changes with distance. `distance` is threaded through `plot_disk` and the
+`graticule_segments` / `disk_terminator` overlays too, so the vector
+layers stay registered with the raster. As `distance → ∞` the result
+converges back to the orthographic view.
+
+<p align="center">
+<img src="figures/perspective/earth_ladder.png" alt="Earth camera-distance ladder" width="100%">
+</p>
+
+Earth from orthographic (∞) down to 1.8 radii — the globe's edge curls
+away and the graticule bunches toward the limb as the camera closes in.
+Built by [`examples/perspective.py`](examples/perspective.py)
+(`python examples/perspective.py --body Earth`).
+
+
 ## Examples
 
 A small curated showcase of `implanet` output. Each figure is
@@ -401,7 +435,10 @@ unit sphere is
     P = u·right + v·up − z·forward       (world coords, body-fixed)
 
 The near hemisphere is the one with P·`forward` ≤ 0 — the side facing
-the camera. Code: `orthographic_rays()`.
+the camera. Code: `orthographic_rays()`. When `distance` is set, the same
+(u, v) grid instead seeds camera rays from `C = −distance·forward` that
+are intersected with the sphere — `perspective_rays()` — and the visible
+set tightens to P·`forward` ≤ −1/`distance`.
 
 ### 3.  Sphere → texture coordinates
 
@@ -480,6 +517,11 @@ image = render_disk(
                                    # Pass an RGB tuple 0-255 or a matplotlib
                                    #   colour string ("white", "#1f77b4",
                                    #   "0.25") for an opaque fill.
+    distance=None,                 # None → orthographic (camera at ∞).
+                                   # A float > 1 (planet radii) → perspective:
+                                   #   nearer camera sees a smaller visible cap
+                                   #   with more foreshortening. Silhouette-
+                                   #   normalized, so extent/margin are unchanged.
 )
 # image: uint8 ndarray (H, W) or (H, W, C); row 0 = top.
 # Default output is RGBA (C=4) so the corners are transparent.
@@ -508,14 +550,15 @@ output = render_flatmap(
 info = render_info(
     texture, view_direction=(1, 0, 0), up=None,
     size=512, margin=1.05, lon0=-math.pi,
-    sun_direction=None, ambient=0.15,
+    sun_direction=None, ambient=0.15, distance=None,
 )
 # Same signature as render_disk (minus background). Body-name strings
 # and view-direction presets work the same way. Returns a dict:
 #   texture → {body, variant, mission, citation, license, …}
 #             (populated when texture is a body name, a path, or a PIL
 #              image whose filename is catalogued in manifest.json)
-#   camera  → {view_direction, up, sub_observer_lat_deg, …_lon_deg}
+#   camera  → {view_direction, up, sub_observer_lat_deg, …_lon_deg,
+#              distance, projection}   # projection: "orthographic"/"perspective"
 #   sun     → {sun_direction, sub_solar_lat_deg, …, ambient} or None
 #   output  → {size, margin, lon0}
 #   caption → one-line string ready for a figure caption / title
@@ -529,6 +572,8 @@ fig, ax = plot_disk(
     sun_direction=None, ambient=0.15,
     size=512, margin=1.05, lon0=-math.pi,
     background=None,               # default: transparent corners
+    distance=None,                 # None → orthographic; float > 1 → perspective
+                                   #   (threaded to raster + overlays alike)
     ax=None,                       # pass your own pre-styled axes for
                                    #   size / DPI / title control
     show_graticule=True, graticule_step_deg=30,
@@ -552,6 +597,9 @@ resolve_view(view, up=None)                        # preset name or 3-vec
 camera_basis(view_direction, up=(0,0,1))           # → (right, up, forward)
 orthographic_rays(size, right, up, forward, margin=1.0)
                                                    # → (HxWx3 points, HxW mask)
+perspective_rays(size, right, up, forward, distance, margin=1.0)
+                                                   # finite-distance counterpart
+                                                   #   (distance in planet radii)
 sphere_to_uv(points, lon0=0.0)                     # → (u, v) in [0, 1]
 ```
 
@@ -565,15 +613,17 @@ overlay layer itself.
 ```python
 graticule_segments(view_direction, up=(0,0,1),
                    lat_step_deg=30, lon_step_deg=30,
-                   include_poles=True, samples_per_line=361)
+                   include_poles=True, samples_per_line=361, distance=None)
     # → {"parallels": (xs, ys), "meridians": (xs, ys)}
     #   xs, ys are parallel LISTS of 1-D arrays — one polyline per line:
     #   for x, y in zip(*g["parallels"]): ax.plot(x, y)
+    #   distance: match render_disk's for perspective-correct overlays.
 
 limb_circle(samples=360)                           # → (x, y)  two 1-D arrays
 subobserver_point(view_direction, up=(0,0,1))      # → (lat_deg, lon_deg) floats
 
-disk_terminator(view_direction, sun_direction, up=(0,0,1), samples=361)
+disk_terminator(view_direction, sun_direction, up=(0,0,1), samples=361,
+                distance=None)
     # → (xs, ys)  parallel lists of 1-D arrays: the projected great
     #   circle {P : P · sun_unit = 0}, clipped at the limb.
 

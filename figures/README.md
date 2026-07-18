@@ -10,6 +10,7 @@ git-ignored; only this hand-picked set is committed).
 | ![earth ne3](earth_natural_earth3.png)<br>`earth_natural_earth3.png` | The vivid `natural_earth3` Earth variant (Natural Earth III), ~2× brighter than the default Blue Marble. | `examples/earth_dayside.py` (variant) |
 | ![earth dayside](earth_dayside_spice.png)<br>`earth_dayside_spice.png` | Fully sunlit Earth with SPICE-derived geometry — sub-solar = sub-observer at `2026-04-03T00:27:39 UTC` (Pacific facing the Sun). | `examples/earth_dayside.py` |
 | ![daynight](reference_daynight.png)<br>`reference_daynight.png` | The synthetic day/night reference texture (built locally, no download) used to verify viewing geometry. | `examples/daynight_reference.py` |
+| ![perspective](perspective/earth_ladder.png)<br>`perspective/earth_ladder.png` | Camera-distance ladder — Earth from orthographic (∞) to 1.8 radii; the visible cap shrinks and foreshortens as the perspective camera closes in (overlays stay registered). | `examples/perspective.py` |
 
 Illumination/phase in the SPICE-driven figures is physically correct for
 the stated UTC. Map credits are in `maps/manifest.json`. For a
