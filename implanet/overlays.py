@@ -52,16 +52,44 @@ def _polyline_segments(uvz: np.ndarray, visible: np.ndarray):
     return xs, ys
 
 
-def _project(points: np.ndarray, right, up, forward):
-    """Return (N, 3) array of (u, v, z_along_forward) per point.
+def _project(points: np.ndarray, right, up, forward, distance=None):
+    """Return (N, 3) array of ``(u, v, g)`` per point.
 
-    A point is visible iff z (its component along +forward) is <= 0, since
-    the camera sits at -forward * inf and looks toward +forward.
+    ``(u, v)`` are the image-plane coordinates and ``g`` is a signed
+    visibility metric: a point is visible (on the near, camera-facing
+    hemisphere) iff ``g <= 0``, and ``g = 0`` marks the apparent limb.
+    ``g`` is what :func:`_polyline_segments` interpolates to clip arcs
+    exactly at the limb.
+
+    With ``distance=None`` this is the orthographic projection (camera at
+    ``-forward * inf``): ``u = P·right``, ``v = P·up``, ``g = P·forward``.
+
+    With a finite ``distance`` (planet radii, > 1) it is the perspective
+    projection for a camera at ``C = -distance * forward``, framed so the
+    apparent silhouette maps to unit radius — matching
+    :func:`implanet.projection.perspective_rays`. As ``distance -> inf``
+    it converges to the orthographic form.
     """
-    u = points @ right
-    v = points @ up
-    z = points @ forward
-    return np.stack([u, v, z], axis=-1)
+    pr = points @ right
+    pu = points @ up
+    pf = points @ forward
+    if distance is None:
+        return np.stack([pr, pu, pf], axis=-1)
+
+    d = float(distance)
+    if d <= 1.0:
+        raise ValueError(
+            f"distance must be > 1 planet radius (camera outside the "
+            f"sphere); got {d!r}."
+        )
+    # k = tan(arcsin(1/d)); denom = forward-distance from camera to point.
+    k = 1.0 / np.sqrt(d * d - 1.0)
+    denom = pf + d
+    u = pr / (k * denom)
+    v = pu / (k * denom)
+    # Visible iff the outward normal faces the camera: P·forward <= -1/d.
+    g = pf + 1.0 / d
+    return np.stack([u, v, g], axis=-1)
 
 
 def _parallel_points(lat_rad: float, n: int = 361) -> np.ndarray:
@@ -85,6 +113,7 @@ def graticule_segments(
     lon_step_deg: float = 30.0,
     include_poles: bool = True,
     samples_per_line: int = 361,
+    distance: float | None = None,
 ):
     """Return projected lat/lon line segments for the visible hemisphere.
 
@@ -95,6 +124,11 @@ def graticule_segments(
 
     Examples
     --------
+    `distance` (planet radii, > 1) switches from the default orthographic
+    projection to the perspective one — pass the same value you gave
+    :func:`implanet.render.render_disk` so the graticule stays registered
+    with the raster.
+
     For an equatorial view, the 30° grid produces five parallels and
     twelve meridians:
 
@@ -124,7 +158,7 @@ def graticule_segments(
         pass
     for lat_deg in lats:
         pts = _parallel_points(np.deg2rad(lat_deg), samples_per_line)
-        uvz = _project(pts, right, up_axis, forward)
+        uvz = _project(pts, right, up_axis, forward, distance)
         visible = uvz[:, 2] <= 1e-9
         xs, ys = _polyline_segments(uvz, visible)
         p_xs.extend(xs); p_ys.extend(ys)
@@ -136,7 +170,7 @@ def graticule_segments(
     lons = ((lons + 180) % 360) - 180
     for lon_deg in lons:
         pts = _meridian_points(np.deg2rad(lon_deg), samples_per_line // 2 + 1)
-        uvz = _project(pts, right, up_axis, forward)
+        uvz = _project(pts, right, up_axis, forward, distance)
         visible = uvz[:, 2] <= 1e-9
         xs, ys = _polyline_segments(uvz, visible)
         m_xs.extend(xs); m_ys.extend(ys)
@@ -163,6 +197,7 @@ def disk_terminator(
     sun_direction: Sequence[float],
     up: Sequence[float] = (0.0, 0.0, 1.0),
     samples: int = 361,
+    distance: float | None = None,
 ):
     """Projected day-night terminator as visible polyline segments.
 
@@ -202,7 +237,7 @@ def disk_terminator(
     e1, e2 = _orthonormal_pair_perp_to(s)
     t = np.linspace(0.0, 2.0 * np.pi, samples)
     pts = np.outer(np.cos(t), e1) + np.outer(np.sin(t), e2)   # (N, 3)
-    uvz = _project(pts, right, up_axis, forward)
+    uvz = _project(pts, right, up_axis, forward, distance)
     visible = uvz[:, 2] <= 1e-9
     return _polyline_segments(uvz, visible)
 

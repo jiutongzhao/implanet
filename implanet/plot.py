@@ -49,6 +49,7 @@ def plot_disk(
     margin: float = 1.05,
     lon0: float = -np.pi,
     background=None,
+    distance: Optional[float] = None,
     *,
     ax=None,
     show_graticule: bool = True,
@@ -95,6 +96,12 @@ def plot_disk(
         is a free 3-vector.
     ambient, size, lon0, background
         Passed through to :func:`render_disk`.
+    distance : float or None
+        Camera distance from the planet center, in planet radii. ``None``
+        (default) renders orthographically (camera at infinity); a finite
+        value > 1 switches to a perspective view and is threaded through
+        to the raster *and* the graticule / terminator overlays so they
+        stay registered. See :func:`render_disk` for the framing details.
     margin : float
         Half-width of the data extent — the disk lives in
         ``[-1, +1]`` planet radii and ``margin > 1`` leaves a cushion
@@ -163,6 +170,7 @@ def plot_disk(
         sun_direction=sun_direction,
         ambient=ambient,
         background=background,
+        distance=distance,
     )
 
     if ax is None:
@@ -195,7 +203,8 @@ def plot_disk(
         gk.update(graticule_kwargs or {})
         g = graticule_segments(view_direction, up=up,
                                lat_step_deg=graticule_step_deg,
-                               lon_step_deg=graticule_step_deg)
+                               lon_step_deg=graticule_step_deg,
+                               distance=distance)
         for key in ("parallels", "meridians"):
             xs, ys = g[key]
             for x, y in zip(xs, ys):
@@ -210,7 +219,8 @@ def plot_disk(
     if show_terminator and sun_direction is not None:
         tk = {"color": "white", "lw": 1.2, "ls": "--", "zorder": 4}
         tk.update(terminator_kwargs or {})
-        xs, ys = disk_terminator(view_direction, sun_direction, up=up)
+        xs, ys = disk_terminator(view_direction, sun_direction, up=up,
+                                 distance=distance)
         for x, y in zip(xs, ys):
             ax.plot(x, y, **tk)
 

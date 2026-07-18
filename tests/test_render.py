@@ -8,7 +8,7 @@ from implanet import (
     camera_basis, sphere_to_uv,
     disk_terminator, flatmap_terminator,
 )
-from implanet.projection import orthographic_rays
+from implanet.projection import orthographic_rays, perspective_rays
 
 
 def test_camera_basis_orthonormal():
@@ -567,3 +567,104 @@ def test_render_coerces_palette_image(tmp_path):
     # into an opaque background. Either way, not the 1-channel palette.
     assert img.ndim == 3 and img.shape[-1] in (3, 4)
     assert int(img.max()) > 100                   # real colour values
+
+
+# --- perspective / camera-distance projection ---------------------------
+
+def test_perspective_rays_points_on_unit_sphere():
+    r, u, f = camera_basis((-1, 0, 0))
+    pts, mask = perspective_rays(96, r, u, f, distance=3.0, margin=1.0)
+    norms = np.linalg.norm(pts[mask], axis=-1)
+    np.testing.assert_allclose(norms, 1.0, atol=1e-12)
+
+
+def test_perspective_center_pixel_is_subobserver():
+    # The center ray hits P = -forward regardless of distance.
+    r, u, f = camera_basis((-1, 0, 0))
+    pts, _ = perspective_rays(101, r, u, f, distance=2.5, margin=1.0)
+    np.testing.assert_allclose(pts[50, 50], [1.0, 0.0, 0.0], atol=1e-9)
+
+
+def test_perspective_silhouette_fills_frame_like_ortho():
+    # Silhouette-normalized framing → same disk fill fraction (~pi/4) as
+    # the orthographic view, independent of distance.
+    r, u, f = camera_basis((-1, 0, 0))
+    _, mask_near = perspective_rays(1024, r, u, f, distance=1.5, margin=1.0)
+    _, mask_far = perspective_rays(1024, r, u, f, distance=20.0, margin=1.0)
+    assert abs(mask_near.mean() - np.pi / 4) < 5e-3
+    assert abs(mask_far.mean() - np.pi / 4) < 5e-3
+
+
+def test_perspective_visible_cap_shrinks_with_distance():
+    # The visible cap's angular radius from the sub-observer point is
+    # arccos(1/d): nearer camera → smaller cap. Measure via the most
+    # limb-ward visible point, P·(-forward) ≈ 1/d.
+    r, u, f = camera_basis((-1, 0, 0))
+    for d in (1.5, 3.0, 10.0):
+        pts, mask = perspective_rays(512, r, u, f, distance=d, margin=1.0)
+        along = pts[mask] @ (-f)                 # cos(angle from sub-obs)
+        assert abs(along.min() - 1.0 / d) < 5e-3
+
+
+def test_perspective_recovers_orthographic_at_large_distance():
+    r, u, f = camera_basis((-1, 0, 0))
+    pts_o, mask_o = orthographic_rays(128, r, u, f, margin=1.0)
+    pts_p, mask_p = perspective_rays(128, r, u, f, distance=1e5, margin=1.0)
+    assert np.array_equal(mask_o, mask_p)
+    np.testing.assert_allclose(pts_p[mask_p], pts_o[mask_o], atol=1e-3)
+
+
+def test_perspective_rays_rejects_distance_inside_sphere():
+    r, u, f = camera_basis((-1, 0, 0))
+    for bad in (1.0, 0.5, -2.0):
+        with pytest.raises(ValueError):
+            perspective_rays(16, r, u, f, distance=bad)
+
+
+def test_render_disk_distance_matches_ortho_at_center():
+    # Same sub-observer point → identical center-pixel colour, ortho vs
+    # perspective. Uses a smooth synthetic texture so bilinear sampling
+    # is stable.
+    tex = np.tile(np.linspace(0, 255, 128, dtype=np.uint8), (64, 1))
+    tex = np.stack([tex] * 3, axis=-1)
+    a = render_disk(tex, view_direction=(-1, 0, 0), size=201, margin=1.0)
+    b = render_disk(tex, view_direction=(-1, 0, 0), size=201, margin=1.0,
+                    distance=4.0)
+    np.testing.assert_allclose(a[100, 100, :3], b[100, 100, :3], atol=1)
+
+
+def test_render_disk_distance_validates():
+    tex = np.zeros((16, 32, 3), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        render_disk(tex, view_direction=(-1, 0, 0), distance=1.0)
+
+
+def test_render_info_reports_distance_and_projection():
+    tex = np.zeros((16, 32, 3), dtype=np.uint8)
+    ortho = render_info(tex, view_direction=(-1, 0, 0))
+    persp = render_info(tex, view_direction=(-1, 0, 0), distance=3.0)
+    assert ortho["camera"]["distance"] is None
+    assert ortho["camera"]["projection"] == "orthographic"
+    assert persp["camera"]["distance"] == 3.0
+    assert persp["camera"]["projection"] == "perspective"
+    assert "dist 3 R" in persp["caption"]
+
+
+def test_graticule_perspective_stays_within_limb():
+    # Every projected graticule point sits inside the unit apparent disk.
+    from implanet.overlays import graticule_segments
+    g = graticule_segments((-1, 0, 0), distance=2.0)
+    for key in ("parallels", "meridians"):
+        xs, ys = g[key]
+        for x, y in zip(xs, ys):
+            assert np.all(x * x + y * y <= 1.0 + 1e-6)
+
+
+def test_overlay_project_recovers_orthographic_at_large_distance():
+    from implanet.overlays import _project
+    r, u, f = camera_basis((-1, 0, 0))
+    pts = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],
+                    [0.5, 0.5, 0.7071]], dtype=np.float64)
+    ortho = _project(pts, r, u, f)
+    persp = _project(pts, r, u, f, distance=1e6)
+    np.testing.assert_allclose(persp[:, :2], ortho[:, :2], atol=1e-4)

@@ -184,6 +184,96 @@ def orthographic_rays(size, right, up, forward, margin=1.0):
     return points, mask
 
 
+def perspective_rays(size, right, up, forward, distance, margin=1.0):
+    """Return (points_on_sphere, mask) for a finite-distance (perspective) view.
+
+    The orthographic counterpart to :func:`orthographic_rays`. The camera
+    sits at ``C = -distance * forward`` (i.e. `distance` planet radii from
+    the center, on the far side of the view direction) and each pixel
+    traces a ray through the image plane into the scene, intersecting the
+    unit sphere at its near surface point (or NaN off the apparent disk).
+
+    Framing is **silhouette-normalized**: the sphere's apparent outline (a
+    circle of angular radius ``arcsin(1/distance)``) is mapped to unit
+    radius in the image, exactly as the full disk is in the orthographic
+    case. So ``margin`` and the ``[-1, +1]`` planet-radii extent keep the
+    same meaning, and :func:`limb_circle` stays valid. What changes with
+    distance is the *content*: a nearer camera sees a smaller visible cap
+    (bounded by the tangent cone) with stronger foreshortening toward the
+    limb. As ``distance -> inf`` the result converges to
+    :func:`orthographic_rays`.
+
+    `distance` is in units of the planet radius and must be > 1 (the camera
+    must sit outside the unit sphere).
+
+    Examples
+    --------
+    From 3 radii out, the center pixel still hits the sub-observer point,
+    and every surface point lies on the unit sphere:
+
+        >>> r, u, f = camera_basis((-1, 0, 0))
+        >>> points, mask = perspective_rays(256, r, u, f, distance=3.0)
+        >>> np.allclose(points[128, 128], [1.0, 0.0, 0.0], atol=2e-2)
+        True
+        >>> radii = np.linalg.norm(points[mask], axis=-1)
+        >>> np.allclose(radii, 1.0, atol=1e-9)
+        True
+
+    The apparent disk still fills the frame (silhouette-normalized), so the
+    hit fraction matches the orthographic pi/4:
+
+        >>> abs(mask.mean() - 3.14159 / 4) < 0.01
+        True
+    """
+    d = float(distance)
+    if d <= 1.0:
+        raise ValueError(
+            f"distance must be > 1 planet radius (camera outside the "
+            f"sphere); got {d!r}."
+        )
+    if isinstance(size, int):
+        h = w = size
+    else:
+        h, w = size
+
+    forward = _normalize(forward)
+    right = _normalize(right)
+    up = _normalize(up)
+
+    radius = 0.5 * min(h, w) / margin
+    cy, cx = (h - 1) / 2.0, (w - 1) / 2.0
+    ys = np.arange(h, dtype=np.float64)[:, None]
+    xs = np.arange(w, dtype=np.float64)[None, :]
+
+    # Normalized image-plane coordinates: a right, b up, image-y down.
+    a = (xs - cx) / radius
+    b = -(ys - cy) / radius
+
+    # Tangent half-angle theta = arcsin(1/d); k = tan(theta) so that a=1
+    # (the frame edge before `margin`) maps exactly to the tangent ray.
+    k = 1.0 / np.sqrt(d * d - 1.0)
+
+    # Ray direction per pixel: normalize(forward + a*k*right + b*k*up).
+    dirs = (
+        forward
+        + (a * k)[..., None] * right
+        + (b * k)[..., None] * up
+    )
+    dirs /= np.linalg.norm(dirs, axis=-1, keepdims=True)
+
+    # Ray-sphere intersection for |C + t*D| = 1 with |C| = d and |D| = 1:
+    #   t**2 + 2 (C·D) t + (d**2 - 1) = 0.
+    C = -d * forward
+    CdotD = dirs @ C                         # (H, W)
+    disc = CdotD * CdotD - (d * d - 1.0)
+    mask = disc >= 0.0
+    t = -CdotD - np.sqrt(np.clip(disc, 0.0, None))   # near root, t >= 0
+
+    points = C + t[..., None] * dirs
+    points = np.where(mask[..., None], points, np.nan)
+    return points, mask
+
+
 def sphere_to_uv(points, lon0=0.0):
     """Map points on the unit sphere to equirectangular (u, v) in [0, 1].
 

@@ -5,6 +5,7 @@ from implanet.render import render_disk, render_flatmap, render_info
 from implanet.projection import (
     camera_basis,
     orthographic_rays,
+    perspective_rays,
     resolve_view,
     sphere_to_uv,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "plot_disk",
     "camera_basis",
     "orthographic_rays",
+    "perspective_rays",
     "resolve_view",
     "sphere_to_uv",
     "graticule_segments",

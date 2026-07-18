@@ -12,6 +12,7 @@ from PIL import Image
 from implanet.projection import (
     camera_basis,
     orthographic_rays,
+    perspective_rays,
     resolve_view,
     sphere_to_uv,
 )
@@ -144,6 +145,7 @@ def render_disk(
     sun_direction: Vec3 | None = None,
     ambient: float = 0.15,
     background: Sequence[int] | str | None = None,
+    distance: float | None = None,
 ):
     """Render an equirectangular planet map as viewed from `view_direction`.
 
@@ -198,6 +200,16 @@ def render_disk(
         ``(r, g, b)`` triple in [0, 255] or any matplotlib color
         string (``"white"``, ``"#1f77b4"``, ``"0.25"``) for an opaque
         fill.
+    distance : float or None
+        Camera distance from the planet center, in planet radii. The
+        default ``None`` renders an orthographic view (camera at
+        infinity), exactly as before. A finite value > 1 switches to a
+        perspective projection: the camera sits `distance` radii out and
+        a nearer camera sees a smaller visible cap with stronger
+        foreshortening toward the limb. Framing is silhouette-normalized,
+        so the apparent disk still fills ``[-1, +1]`` and `margin`,
+        `extent`, and the overlay coordinates keep their meaning. Must be
+        > 1 (the camera must sit outside the sphere).
 
     Examples
     --------
@@ -234,7 +246,12 @@ def render_disk(
 
     view_direction, up = resolve_view(view_direction, up)
     right, up_axis, forward = camera_basis(view_direction, up)
-    points, mask = orthographic_rays(size, right, up_axis, forward, margin=margin)
+    if distance is None:
+        points, mask = orthographic_rays(size, right, up_axis, forward,
+                                         margin=margin)
+    else:
+        points, mask = perspective_rays(size, right, up_axis, forward,
+                                        distance, margin=margin)
 
     # Sample texture at every pixel (mask is applied at the end).
     safe_points = np.where(np.isnan(points), 0.0, points)
@@ -312,6 +329,7 @@ def render_info(
     lon0: float = -np.pi,
     sun_direction: Vec3 | None = None,
     ambient: float = 0.15,
+    distance: float | None = None,
 ) -> dict:
     """Describe the texture + camera state behind a `render_disk` call.
 
@@ -399,6 +417,8 @@ def render_info(
         up=tuple(float(c) for c in up),
         sub_observer_lat_deg=float(sub_obs_lat),
         sub_observer_lon_deg=float(sub_obs_lon),
+        distance=(None if distance is None else float(distance)),
+        projection=("orthographic" if distance is None else "perspective"),
     )
 
     # --- sun geometry -----------------------------------------------------
@@ -428,6 +448,8 @@ def render_info(
     elif tex_info["filename"]:
         bits.append(tex_info["filename"])
     bits.append(_format_latlon("sub-obs", sub_obs_lat, sub_obs_lon))
+    if distance is not None:
+        bits.append(f"dist {float(distance):.3g} R")
     if sun_info is not None:
         sd = sun_info["sun_direction"]
         bits.append(f"sun ({sd[0]:.2f}, {sd[1]:.2f}, {sd[2]:.2f})")
